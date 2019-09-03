@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            html, body {
+                margin:0;
+            }
+
+            iframe{
+                border:0;
+                padding:0;
+                margin:0;
+                height:100vh;
+                width:100vw;
+            }
+        </style>
+    </head>
+    <body>
+        <iframe id="rocketFrame" src="http://karmanode:3000/"></iframe>
+
+        <script>
+            const rocketFrame = document.getElementById('rocketFrame')
+            rocketFrame.src = window.location.protocol + '://' + window.location.hostname + ':3000'
+        </script>
+    </body>
+</html>
