@@ -4,5 +4,8 @@
   "main": "index.js",
   "repository": "https://github.com/frag-crypto/frag-default-plugins.git",
   "author": "irontiga <irontiga@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "rollup": "^1.20.3"
+  }
 }
