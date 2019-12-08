@@ -6,7 +6,7 @@ const plugins = [
     // },
     {
         folder: path.join(__dirname, 'plugins/core'),
-        name: 'core'
+        name: 'core' // domain name
     },
     // {
     //     folder: path.join(__dirname, 'plugins/rocket-chat')
