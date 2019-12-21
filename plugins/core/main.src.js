@@ -22,7 +22,8 @@ const pingAirdropServer = () => {
 parentEpml.ready().then(() => {
     parentEpml.request('registerUrl', {
         url: 'wallet',
-        page: 'core/wallet/index.html',
+        domain: 'core',
+        page: 'wallet/index.html',
         title: 'Wallet',
         // icon: 'credit_card',
         icon: 'account_balance_wallet',
@@ -31,7 +32,8 @@ parentEpml.ready().then(() => {
     })
     parentEpml.request('registerUrl', {
         url: 'send-money',
-        page: 'core/send-money/index.html',
+        domain: 'core',
+        page: 'send-money/index.html',
         title: 'Send Money',
         icon: 'send',
         menus: [],

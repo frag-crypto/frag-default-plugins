@@ -1,4 +1,5 @@
 const path = require('path')
+const generateForPlugins = require('./build.js')
 
 const plugins = [
     // {
@@ -17,4 +18,7 @@ const plugins = [
     }
 ]
 
-module.exports = plugins
+module.exports = {
+    plugins,
+    generateForPlugins
+}

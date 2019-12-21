@@ -33523,13 +33523,6 @@
                     if (!_this.addressInfoStreams[addr]) {
                       console.log('AND DIDN\'T FIND AN EXISTING ADDRESS STREAM');
                       _this.addressInfoStreams[addr] = coreEpml.subscribe("address/".concat(addr), function (addrInfo) {
-                        console.log('HELLLLLLOOOOOOOOO');
-                        console.log('HELLLLLLOOOOOOOOO');
-                        console.log('HELLLLLLOOOOOOOOO');
-                        console.log('HELLLLLLOOOOOOOOO');
-                        console.log('HELLLLLLOOOOOOOOO');
-                        console.log('HELLLLLLOOOOOOOOO');
-                        console.log('HELLLLLLOOOOOOOOO');
                         addrInfo = JSON.parse(addrInfo);
                         console.log('FINALLY RECEIVE ADDR INFO..', addrInfo);
                         _this.loading = false;
@@ -33542,7 +33535,6 @@
                         console.log(addrInfo.nativeBalance);
                         _this.addressesInfo = objectSpread({}, _this.addressesInfo, defineProperty$2({}, addr, addrInfo));
                         _this.selectedAddressInfo = _this.addressesInfo[_this.selectedAddress.address];
-                        console.log('ASDHJKFGASDKHGFGHASDKJFGHJKDSADFGHJKSSDGHJKDGHJKF');
                         console.log(_this.addressesInfo);
                         console.log(_this.selectedAddressInfo); // const addressesInfoStore = this.addressesInfo
                         // this.addressesInfo = {}
