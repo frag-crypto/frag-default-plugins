@@ -31,16 +31,15 @@ const doCheck = async () => {
     }, BLOCK_CHECK_TIMEOUT)
 
     const block = await parentEpml.request('apiCall', {
-        type: 'api',
-        url: 'blocks/last'
+        url: '/blocks/last'
     })
     clearTimeout(timeout)
-
-    const parsedBlock = JSON.parse(block)
+    console.log(block)
+    // const parsedBlock = JSON.parse(block)
     // console.log(parsedBlock, mostRecentBlock)
-    if (parsedBlock.height > mostRecentBlock.height) {
+    if (block.height > mostRecentBlock.height) {
         // console.log('NNEEEWWW BLLOOCCCKKK')
-        mostRecentBlock = parsedBlock
+        mostRecentBlock = block
         onNewBlockFunctions.forEach(fn => fn(mostRecentBlock))
     }
 }

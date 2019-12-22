@@ -45,10 +45,14 @@ export class UnconfirmedTransactionWatcher {
             // console.log(`checking ${addr}`)
             return parentEpml.request('apiCall', {
                 type: 'api',
-                url: `transactions/unconfirmedof/${addr}`
+                // url: `transactions/unconfirmedof/${addr}`
+                url: `/transactions/unconfirmed`
             }).then(unconfirmedTransactions => {
-                unconfirmedTransactions = JSON.parse(unconfirmedTransactions)
+                // unconfirmedTransactions = JSON.parse(unconfirmedTransactions)
                 console.log(unconfirmedTransactions)
+                unconfirmedTransactions.filter(tx => {
+                    tx.creatorAddress === addr || tx.recipient === addr
+                })
                 // console.log(unconfirmedTransactions, unconfirmedTransactions.length)
                 // if(unconfirmedTransactions.length === 0) {
                 //     return

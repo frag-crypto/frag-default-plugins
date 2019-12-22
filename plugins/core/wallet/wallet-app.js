@@ -34624,7 +34624,7 @@
                 
                 
                 <div ?hidden="${this.loading}">
-                    <div id="topbar" style="background:xxxxxxxxxxxxxxxxxxxxxxxxxxxxx; color: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx; padding: 20px;">
+                    <div id="topbar" style="background: ; color: ; padding: 20px;">
                         <span class="mono weight-1300">
                             <iron-icon icon="account-balance-wallet"></iron-icon> ${this.selectedAddress.address}
                         </span>
@@ -34636,7 +34636,7 @@
                             <div>
                                 <span class="mono weight-100" style="font-size: 70px;">${this.floor(this.selectedAddressInfo.nativeBalance.total[0])}<span
                                         style="font-size:24px; vertical-align: top; line-height:60px;">.${this.decimals(this.selectedAddressInfo.nativeBalance.total[0])}
-                                        KMX</span></span>
+                                        qort</span></span>
                                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                             </div>
                 
@@ -34652,10 +34652,11 @@
                 
                                 <!-- <div class="card-content"  hidden$="{{!isEmptyArray(address.transactions)}}"> -->
                                 <!--!this.isEmptyArray(this.selectedAddressTransactions)-->
-                                <div class="card-content" ?hidden="${[...this.selectedAddressInfo.transactions].length > 0}">
-                                    Address has no transactions yet. Start by sending some KMX to <b>${this.selectedAddress.address}</b>
+                                <div class="card-content" style="padding-left:12px;" ?hidden="${[...this.selectedAddressInfo.transactions].length > 0}">
+                                    Address has no transactions yet. 
+                                    <!-- Start by sending some KMX to <b>${this.selectedAddress.address}</b>
                                     or
-                                    by claiming KEX from the airdrop.
+                                    by claiming KEX from the airdrop. -->
                                 </div>
                 
                                 <div id="tableContainer" style="max-width:100vw; overflow-x: auto;" ?hidden=${this.selectedAddressInfo.transactions.length < 1}>

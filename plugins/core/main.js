@@ -38,16 +38,20 @@
         this.updateAddress(addr);
       }
 
-      testBlock(block) {
+      async testBlock(block) {
         // console.log('TESTING BLOCK')
         const pendingUpdateAddresses = []; // blockTests.forEach(fn => {
         // })
         // transactionTests.forEach(fn => {
+        // 
 
-        block.transactions.forEach(transaction => {
-          console.log(this); // fn(transaction, Object.keys(this._addresses))
+        const transactions = await parentEpml.request('apiCall', {
+          url: `/transactions/block/${block.signature}`
+        });
+        transactions.forEach(transaction => {
+          // console.log(this)
+          // fn(transaction, Object.keys(this._addresses))
           // Guess the block needs transactions
-
           for (const addr of Object.keys(this._addresses)) {
             // const addrChanged = transactionTests.some(fn => {
             //     return fn(transaction, addr)
@@ -134,10 +138,14 @@
           // console.log(`checking ${addr}`)
           return parentEpml.request('apiCall', {
             type: 'api',
-            url: `transactions/unconfirmedof/${addr}`
+            // url: `transactions/unconfirmedof/${addr}`
+            url: `/transactions/unconfirmed`
           }).then(unconfirmedTransactions => {
-            unconfirmedTransactions = JSON.parse(unconfirmedTransactions);
-            console.log(unconfirmedTransactions); // console.log(unconfirmedTransactions, unconfirmedTransactions.length)
+            // unconfirmedTransactions = JSON.parse(unconfirmedTransactions)
+            console.log(unconfirmedTransactions);
+            unconfirmedTransactions.filter(tx => {
+              tx.creatorAddress === addr || tx.recipient === addr;
+            }); // console.log(unconfirmedTransactions, unconfirmedTransactions.length)
             // if(unconfirmedTransactions.length === 0) {
             //     return
             // }
@@ -212,16 +220,51 @@
 
     const proxySources = new TwoWayMap();
 
+    const BLOCK_CHECK_INTERVAL = 3000;
+    const BLOCK_CHECK_TIMEOUT = 3000;
     const BLOCK_STREAM_NAME = 'new_block';
+    const onNewBlockFunctions = [];
+    let mostRecentBlock = {
+      height: -1
+    };
+    const onNewBlock = newBlockFn => onNewBlockFunctions.push(newBlockFn);
+    const check = () => {
+      const c = doCheck(); // CHANGE TO Promise.prototype.finally
+
+      c.then(() => {
+        setTimeout(() => check(), BLOCK_CHECK_INTERVAL);
+      });
+      c.catch(() => {
+        setTimeout(() => check(), BLOCK_CHECK_INTERVAL);
+      });
+    };
+
+    const doCheck = async () => {
+      let timeout = setTimeout(() => {
+        throw new Error('Block check timed out');
+      }, BLOCK_CHECK_TIMEOUT);
+      const block = await parentEpml.request('apiCall', {
+        url: '/blocks/last'
+      });
+      clearTimeout(timeout);
+      console.log(block); // const parsedBlock = JSON.parse(block)
+      // console.log(parsedBlock, mostRecentBlock)
+
+      if (block.height > mostRecentBlock.height) {
+        // console.log('NNEEEWWW BLLOOCCCKKK')
+        mostRecentBlock = block;
+        onNewBlockFunctions.forEach(fn => fn(mostRecentBlock));
+      }
+    };
 
     const addrWatcher = new AddressWatcher();
     const txWatcher = new UnconfirmedTransactionWatcher();
-    let mostRecentBlock = {
+    let mostRecentBlock$1 = {
       height: -1
     };
     const blockStream = new EpmlStream(BLOCK_STREAM_NAME, () => {
       console.log('WE GOT A SUBSCRIPTION');
-      return mostRecentBlock;
+      return mostRecentBlock$1;
     });
     parentEpml.subscribe('logged_in', async isLoggedIn => {
       if (isLoggedIn === 'true') {
@@ -237,7 +280,13 @@
         parsedAddresses.forEach(addr => txWatcher.addAddress(addr));
       }
     });
-     // check()
+    onNewBlock(block => {
+      console.log('New block', block);
+      mostRecentBlock$1 = block;
+      blockStream.emit(block);
+      addrWatcher.testBlock(block);
+    });
+    check();
 
     // const DHCP_PING_INTERVAL = 1000 * 60 * 10
 

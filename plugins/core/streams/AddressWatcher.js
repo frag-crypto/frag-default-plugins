@@ -37,7 +37,7 @@ export class AddressWatcher {
         this.updateAddress(addr)
     }
 
-    testBlock (block) {
+    async testBlock (block) {
         // console.log('TESTING BLOCK')
         const pendingUpdateAddresses = []
 
@@ -45,8 +45,10 @@ export class AddressWatcher {
 
         // })
         // transactionTests.forEach(fn => {
-        block.transactions.forEach(transaction => {
-            console.log(this)
+        // 
+        const transactions = await parentEpml.request('apiCall', { url: `/transactions/block/${block.signature}` })
+        transactions.forEach(transaction => {
+            // console.log(this)
             // fn(transaction, Object.keys(this._addresses))
             // Guess the block needs transactions
             for (const addr of Object.keys(this._addresses)) {

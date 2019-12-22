@@ -3,7 +3,7 @@ import '@webcomponents/webcomponentsjs/webcomponents-loader.js'
 import '@webcomponents/webcomponentsjs/custom-elements-es5-adapter.js'
 
 import { LitElement, html, css } from 'lit-element'
-import { ERROR_CODES } from '../../../src/qora/constants.js'
+// import { ERROR_CODES } from '../../../src/qora/constants.js'
 // import { Epml } from '../../../src/epml.js'
 import { Epml } from '../../../epml'
 import '@material/mwc-button'

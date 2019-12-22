@@ -34,4 +34,4 @@ onNewBlock(block => {
     blockStream.emit(block)
     addrWatcher.testBlock(block)
 })
-// check()
+check()
