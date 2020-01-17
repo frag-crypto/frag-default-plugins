@@ -1,8 +1,6 @@
 import { parentEpml, visiblePluginEpml } from './connect.js'
 import './streams/streams.js'
 
-console.log("Or SUCK A SMALL ONE ADSJKFHADSSDSDDSDSDSDSSDSDSDSDSDSDSDDSDSDSDSSDSDSDSDDSSDSDSDDSDSDSSDJASKHFDASJKFHASKFJHASKJHSJFK PLUGINSSS")
-
 // Epml.registerProxyInstance(`core-plugin`, epmlInstance)
 // const DHCP_PING_INTERVAL = 1000 * 60 * 10
 const DHCP_PING_INTERVAL = 1000 * 10 // 10 seconds
