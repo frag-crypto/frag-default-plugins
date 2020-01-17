@@ -1,5 +1,7 @@
 const path = require('path')
-const generateForPlugins = require('./build.js')
+// const generateForPlugins = require('./build.js')
+const build = require('./build.js')
+const watch = require('./watch.js')
 
 const plugins = [
     // {
@@ -20,5 +22,7 @@ const plugins = [
 
 module.exports = {
     plugins,
-    generateForPlugins
+    // generateForPlugins,
+    watch,
+    build
 }
