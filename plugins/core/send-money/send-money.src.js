@@ -11,8 +11,6 @@ import '@polymer/paper-input/paper-input.js'
 import '@polymer/paper-progress/paper-progress.js'
 // import '@polymer/paper-spinner/paper-spinner-lite.js'
 
-const KMX_IN_USD = 5 // 1 KMX - 5 USD
-
 const parentEpml = new Epml({ type: 'WINDOW', source: window.parent })
 
 const coreEpml = new Epml({
@@ -47,7 +45,6 @@ class SendMoneyPage extends LitElement {
     static get observers () {
         return [
             // "_setSelectedAddressInfo(selectedAddress.*, addressesInfo)"
-            '_usdKeyUp(usdAmount)',
             '_kmxKeyUp(amount)'
         ]
     }
@@ -55,7 +52,8 @@ class SendMoneyPage extends LitElement {
     static get styles () {
         return css`
             * {
-                --mdc-theme-primary: #18a5b7;
+                --mdc-theme-primary: rgb(3, 169, 244);
+                --paper-input-container-focus-color: var(--mdc-theme-primary);
             }
             #sendMoneyWrapper {
                 /* Extra 3px for left border */
@@ -122,7 +120,6 @@ class SendMoneyPage extends LitElement {
             }
         `
     }
-    // @keyup=${() => {this.shadowRoot.getElementById('USDAmountInput').value = this.shadowRoot.getElementById('amountInput').value / 0.2 }}
     render () {
         return html`
             <div id="sendMoneyWrapper" style="width:auto; padding:10px; background: #fff; height:100vh;">
@@ -134,8 +131,7 @@ class SendMoneyPage extends LitElement {
 
                             <div class="selectedBalance">
                                 <!--  style$="color: {{selectedAddress.color}}" -->
-                                <span class="balance">${this.selectedAddressInfo.nativeBalance.total[0]} KMX
-                                    (${this.selectedAddressInfo.nativeBalance.total[0] * KMX_IN_USD} USD)</span> available for
+                                <span class="balance">${this.selectedAddressInfo.nativeBalance.total[0]} qort</span> available for
                                 transfer from
                                 <span>${this.selectedAddress.address}</span>
                             </div>
@@ -143,24 +139,11 @@ class SendMoneyPage extends LitElement {
 
                     </paper-card>
                     <paper-input
-                        id="USDAmountInput"
-                        label="Amount (USD)"
-                        @keyup=${() => {
-                            this.shadowRoot.getElementById('amountInput').value = this.shadowRoot.getElementById('USDAmountInput').value / 5
-                            this._checkAmount()
-                        }}
-                        ?hidden="${!this.useUSDAmount}"
-                        value="${this.usdAmount}"
-                        type="number">
-                    <div slot="prefix">$ &nbsp;</div>
-                    </paper-input>
-                    <paper-input
                         id="amountInput"
                         required
-                        label="Amount (KMX)"
-                        @keyup="${() => {this.shadowRoot.getElementById('USDAmountInput').value = this.shadowRoot.getElementById('amountInput').value / (1 / 5) }}"
+                        label="Amount (qort)"
                         @input=${() => {
-                            console.log('cahnged')
+                            console.log('changed')
                             this._checkAmount()
                         }}
                         type="number"
@@ -301,7 +284,6 @@ class SendMoneyPage extends LitElement {
         this.addressInfoStreams = {}
         this.unconfirmedTransactionStreams = {}
         this.maxWidth = '600'
-        this.useUSDAmount = true
         this.amount = 0
         this.validAmount = true
 
