@@ -2835,6 +2835,54 @@
     descriptor
   });
 
+  const standardEventOptions = (options, element) => {
+    return Object.assign({}, element, {
+      finisher(clazz) {
+        Object.assign(clazz.prototype[element.key], options);
+      }
+
+    });
+  };
+
+  const legacyEventOptions = // tslint:disable-next-line:no-any legacy decorator
+  (options, proto, name) => {
+    Object.assign(proto[name], options);
+  };
+  /**
+   * Adds event listener options to a method used as an event listener in a
+   * lit-html template.
+   *
+   * @param options An object that specifis event listener options as accepted by
+   * `EventTarget#addEventListener` and `EventTarget#removeEventListener`.
+   *
+   * Current browsers support the `capture`, `passive`, and `once` options. See:
+   * https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener#Parameters
+   *
+   * @example
+   *
+   *     class MyElement {
+   *
+   *       clicked = false;
+   *
+   *       render() {
+   *         return html`<div @click=${this._onClick}`><button></button></div>`;
+   *       }
+   *
+   *       @eventOptions({capture: true})
+   *       _onClick(e) {
+   *         this.clicked = true;
+   *       }
+   *     }
+   */
+
+
+  const eventOptions = options => // Return value typed as any to prevent TypeScript from complaining that
+  // standard decorator function signature does not match TypeScript decorator
+  // signature
+  // TODO(kschaaf): unclear why it was only failing on this decorator and not
+  // the others
+  (protoOrDescriptor, name) => name !== undefined ? legacyEventOptions(options, protoOrDescriptor, name) : standardEventOptions(options, protoOrDescriptor);
+
   /**
   @license
   Copyright (c) 2019 The Polymer Project Authors. All rights reserved.
@@ -4217,6 +4265,28 @@
    * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
    * THE SOFTWARE.
    */
+
+  /**
+   * @fileoverview A "ponyfill" is a polyfill that doesn't modify the global prototype chain.
+   * This makes ponyfills safer than traditional polyfills, especially for libraries like MDC.
+   */
+  function closest(element, selector) {
+    if (element.closest) {
+      return element.closest(selector);
+    }
+
+    var el = element;
+
+    while (el) {
+      if (matches(el, selector)) {
+        return el;
+      }
+
+      el = el.parentElement;
+    }
+
+    return null;
+  }
   function matches(element, selector) {
     var nativeMatches = element.matches || element.webkitMatchesSelector || element.msMatchesSelector;
     return nativeMatches.call(element, selector);
@@ -5403,6 +5473,5386 @@
   let Button = class Button extends ButtonBase {};
   Button.styles = style$2;
   Button = __decorate([customElement('mwc-button')], Button);
+
+  const observer = observer => // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (proto, propName) => {
+    // if we haven't wrapped `updated` in this class, do so
+    if (!proto.constructor._observers) {
+      proto.constructor._observers = new Map();
+      const userUpdated = proto.updated;
+
+      proto.updated = function (changedProperties) {
+        userUpdated.call(this, changedProperties);
+        changedProperties.forEach((v, k) => {
+          const observer = this.constructor._observers.get(k);
+
+          if (observer !== undefined) {
+            observer.call(this, this[k], v);
+          }
+        });
+      }; // clone any existing observers (superclasses)
+
+    } else if (!proto.constructor.hasOwnProperty('_observers')) {
+      const observers = proto.constructor._observers;
+      proto.constructor._observers = new Map();
+      observers.forEach( // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (v, k) => proto.constructor._observers.set(k, v));
+    } // set this method
+
+
+    proto.constructor._observers.set(propName, observer);
+  };
+
+  /**
+  @license
+  Copyright 2018 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  */
+  function addHasRemoveClass(element) {
+    return {
+      addClass: className => {
+        element.classList.add(className);
+      },
+      removeClass: className => {
+        element.classList.remove(className);
+      },
+      hasClass: className => element.classList.contains(className)
+    };
+  }
+
+  const fn = () => {};
+
+  const optionsBlock = {
+    get passive() {
+      return false;
+    }
+
+  };
+  document.addEventListener('x', fn, optionsBlock);
+  document.removeEventListener('x', fn);
+
+  /**
+  @license
+  Copyright 2018 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  */
+  class BaseElement extends LitElement {
+    /**
+     * Create and attach the MDC Foundation to the instance
+     */
+    createFoundation() {
+      if (this.mdcFoundation !== undefined) {
+        this.mdcFoundation.destroy();
+      }
+
+      this.mdcFoundation = new this.mdcFoundationClass(this.createAdapter());
+      this.mdcFoundation.init();
+    }
+
+    firstUpdated() {
+      this.createFoundation();
+    }
+
+  }
+
+  /**
+  @license
+  Copyright 2018 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  */
+  class FormElement extends BaseElement {
+    createRenderRoot() {
+      return this.attachShadow({
+        mode: 'open',
+        delegatesFocus: true
+      });
+    }
+
+    click() {
+      if (this.formElement) {
+        this.formElement.focus();
+        this.formElement.click();
+      }
+    }
+
+    setAriaLabel(label) {
+      if (this.formElement) {
+        this.formElement.setAttribute('aria-label', label);
+      }
+    }
+
+    firstUpdated() {
+      super.firstUpdated();
+      this.mdcRoot.addEventListener('change', e => {
+        this.dispatchEvent(new Event('change', e));
+      });
+    }
+
+  }
+
+  /**
+   * @license
+   * Copyright 2018 Google Inc.
+   *
+   * Permission is hereby granted, free of charge, to any person obtaining a copy
+   * of this software and associated documentation files (the "Software"), to deal
+   * in the Software without restriction, including without limitation the rights
+   * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   * copies of the Software, and to permit persons to whom the Software is
+   * furnished to do so, subject to the following conditions:
+   *
+   * The above copyright notice and this permission notice shall be included in
+   * all copies or substantial portions of the Software.
+   *
+   * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   * THE SOFTWARE.
+   */
+  var strings$1 = {
+    NOTCH_ELEMENT_SELECTOR: '.mdc-notched-outline__notch'
+  };
+  var numbers$1 = {
+    // This should stay in sync with $mdc-notched-outline-padding * 2.
+    NOTCH_ELEMENT_PADDING: 8
+  };
+  var cssClasses$1 = {
+    NO_LABEL: 'mdc-notched-outline--no-label',
+    OUTLINE_NOTCHED: 'mdc-notched-outline--notched',
+    OUTLINE_UPGRADED: 'mdc-notched-outline--upgraded'
+  };
+
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   *
+   * Permission is hereby granted, free of charge, to any person obtaining a copy
+   * of this software and associated documentation files (the "Software"), to deal
+   * in the Software without restriction, including without limitation the rights
+   * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   * copies of the Software, and to permit persons to whom the Software is
+   * furnished to do so, subject to the following conditions:
+   *
+   * The above copyright notice and this permission notice shall be included in
+   * all copies or substantial portions of the Software.
+   *
+   * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   * THE SOFTWARE.
+   */
+
+  var MDCNotchedOutlineFoundation =
+  /** @class */
+  function (_super) {
+    __extends(MDCNotchedOutlineFoundation, _super);
+
+    function MDCNotchedOutlineFoundation(adapter) {
+      return _super.call(this, __assign({}, MDCNotchedOutlineFoundation.defaultAdapter, adapter)) || this;
+    }
+
+    Object.defineProperty(MDCNotchedOutlineFoundation, "strings", {
+      get: function () {
+        return strings$1;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCNotchedOutlineFoundation, "cssClasses", {
+      get: function () {
+        return cssClasses$1;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCNotchedOutlineFoundation, "numbers", {
+      get: function () {
+        return numbers$1;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCNotchedOutlineFoundation, "defaultAdapter", {
+      /**
+       * See {@link MDCNotchedOutlineAdapter} for typing information on parameters and return types.
+       */
+      get: function () {
+        // tslint:disable:object-literal-sort-keys Methods should be in the same order as the adapter interface.
+        return {
+          addClass: function () {
+            return undefined;
+          },
+          removeClass: function () {
+            return undefined;
+          },
+          setNotchWidthProperty: function () {
+            return undefined;
+          },
+          removeNotchWidthProperty: function () {
+            return undefined;
+          }
+        }; // tslint:enable:object-literal-sort-keys
+      },
+      enumerable: true,
+      configurable: true
+    });
+    /**
+     * Adds the outline notched selector and updates the notch width calculated based off of notchWidth.
+     */
+
+    MDCNotchedOutlineFoundation.prototype.notch = function (notchWidth) {
+      var OUTLINE_NOTCHED = MDCNotchedOutlineFoundation.cssClasses.OUTLINE_NOTCHED;
+
+      if (notchWidth > 0) {
+        notchWidth += numbers$1.NOTCH_ELEMENT_PADDING; // Add padding from left/right.
+      }
+
+      this.adapter_.setNotchWidthProperty(notchWidth);
+      this.adapter_.addClass(OUTLINE_NOTCHED);
+    };
+    /**
+     * Removes notched outline selector to close the notch in the outline.
+     */
+
+
+    MDCNotchedOutlineFoundation.prototype.closeNotch = function () {
+      var OUTLINE_NOTCHED = MDCNotchedOutlineFoundation.cssClasses.OUTLINE_NOTCHED;
+      this.adapter_.removeClass(OUTLINE_NOTCHED);
+      this.adapter_.removeNotchWidthProperty();
+    };
+
+    return MDCNotchedOutlineFoundation;
+  }(MDCFoundation);
+
+  class NotchedOutlineBase extends BaseElement {
+    constructor() {
+      super(...arguments);
+      this.mdcFoundationClass = MDCNotchedOutlineFoundation;
+      this.width = 0;
+      this.open = false;
+      this.lastOpen = this.open;
+    }
+
+    createAdapter() {
+      return {
+        addClass: className => this.mdcRoot.classList.add(className),
+        removeClass: className => this.mdcRoot.classList.remove(className),
+        setNotchWidthProperty: width => this.notchElement.style.setProperty('width', `${width}px`),
+        removeNotchWidthProperty: () => this.notchElement.style.removeProperty('width')
+      };
+    }
+
+    openOrClose(shouldOpen, width) {
+      if (!this.mdcFoundation) {
+        return;
+      }
+
+      if (shouldOpen && width !== undefined) {
+        this.mdcFoundation.notch(width);
+      } else {
+        this.mdcFoundation.closeNotch();
+      }
+    }
+
+    render() {
+      this.openOrClose(this.open, this.width);
+      return html`
+      <div class="mdc-notched-outline">
+        <div class="mdc-notched-outline__leading"></div>
+        <div class="mdc-notched-outline__notch">
+          <slot></slot>
+        </div>
+        <div class="mdc-notched-outline__trailing"></div>
+      </div>`;
+    }
+
+  }
+
+  __decorate([query('.mdc-notched-outline')], NotchedOutlineBase.prototype, "mdcRoot", void 0);
+
+  __decorate([property({
+    type: Number
+  })], NotchedOutlineBase.prototype, "width", void 0);
+
+  __decorate([property({
+    type: Boolean,
+    reflect: true
+  })], NotchedOutlineBase.prototype, "open", void 0);
+
+  __decorate([query('.mdc-notched-outline__notch')], NotchedOutlineBase.prototype, "notchElement", void 0);
+
+  /**
+  @license
+  Copyright 2018 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  */
+  const style$3 = css`.mdc-notched-outline{display:flex;position:absolute;right:0;left:0;box-sizing:border-box;width:100%;max-width:100%;height:100%;text-align:left;pointer-events:none}[dir=rtl] .mdc-notched-outline,.mdc-notched-outline[dir=rtl]{text-align:right}.mdc-notched-outline__leading,.mdc-notched-outline__notch,.mdc-notched-outline__trailing{box-sizing:border-box;height:100%;border-top:1px solid;border-bottom:1px solid;pointer-events:none}.mdc-notched-outline__leading{border-left:1px solid;border-right:none;width:12px}[dir=rtl] .mdc-notched-outline__leading,.mdc-notched-outline__leading[dir=rtl]{border-left:none;border-right:1px solid}.mdc-notched-outline__trailing{border-left:none;border-right:1px solid;flex-grow:1}[dir=rtl] .mdc-notched-outline__trailing,.mdc-notched-outline__trailing[dir=rtl]{border-left:1px solid;border-right:none}.mdc-notched-outline__notch{flex:0 0 auto;width:auto;max-width:calc(100% - 12px * 2)}.mdc-notched-outline .mdc-floating-label{display:inline-block;position:relative;max-width:100%}.mdc-notched-outline .mdc-floating-label--float-above{text-overflow:clip}.mdc-notched-outline--upgraded .mdc-floating-label--float-above{max-width:calc(100% / .75)}.mdc-notched-outline--notched .mdc-notched-outline__notch{padding-left:0;padding-right:8px;border-top:none}[dir=rtl] .mdc-notched-outline--notched .mdc-notched-outline__notch,.mdc-notched-outline--notched .mdc-notched-outline__notch[dir=rtl]{padding-left:8px;padding-right:0}.mdc-notched-outline--no-label .mdc-notched-outline__notch{padding:0}:host{display:block;position:absolute;right:0;left:0;box-sizing:border-box;width:100%;max-width:100%;height:100%;text-align:left;pointer-events:none}[dir=rtl] :host,:host[dir=rtl]{text-align:right}::slotted(.mdc-floating-label){display:inline-block;position:relative;top:17px;bottom:auto;max-width:100%}::slotted(.mdc-floating-label--float-above){text-overflow:clip}.mdc-notched-outline--upgraded ::slotted(.mdc-floating-label--float-above){max-width:calc(100% / .75)}.mdc-notched-outline__leading{width:12px;width:var(--mdc-notched-outline-leading-width, 12px);border-radius:4px 0 0 4px;border-radius:var(--mdc-notched-outline-leading-border-radius, 4px 0 0 4px)}.mdc-notched-outline__trailing{border-radius:0 4px 4px 0;border-radius:var(--mdc-notched-outline-trailing-border-radius, 0 4px 4px 0)}.mdc-notched-outline__leading,.mdc-notched-outline__notch,.mdc-notched-outline__trailing{border-color:var(--mdc-notched-outline-border-color, var(--mdc-theme-primary, #6200ee));border-width:1px;border-width:var(--mdc-notched-outline-stroke-width, 1px)}`;
+
+  let NotchedOutline = class NotchedOutline extends NotchedOutlineBase {};
+  NotchedOutline.styles = style$3;
+  NotchedOutline = __decorate([customElement('mwc-notched-outline')], NotchedOutline);
+
+  /**
+   * @license
+   * Copyright 2016 Google Inc.
+   *
+   * Permission is hereby granted, free of charge, to any person obtaining a copy
+   * of this software and associated documentation files (the "Software"), to deal
+   * in the Software without restriction, including without limitation the rights
+   * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   * copies of the Software, and to permit persons to whom the Software is
+   * furnished to do so, subject to the following conditions:
+   *
+   * The above copyright notice and this permission notice shall be included in
+   * all copies or substantial portions of the Software.
+   *
+   * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   * THE SOFTWARE.
+   */
+  var cssClasses$2 = {
+    LABEL_FLOAT_ABOVE: 'mdc-floating-label--float-above',
+    LABEL_SHAKE: 'mdc-floating-label--shake',
+    ROOT: 'mdc-floating-label'
+  };
+
+  /**
+   * @license
+   * Copyright 2016 Google Inc.
+   *
+   * Permission is hereby granted, free of charge, to any person obtaining a copy
+   * of this software and associated documentation files (the "Software"), to deal
+   * in the Software without restriction, including without limitation the rights
+   * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   * copies of the Software, and to permit persons to whom the Software is
+   * furnished to do so, subject to the following conditions:
+   *
+   * The above copyright notice and this permission notice shall be included in
+   * all copies or substantial portions of the Software.
+   *
+   * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   * THE SOFTWARE.
+   */
+
+  var MDCFloatingLabelFoundation =
+  /** @class */
+  function (_super) {
+    __extends(MDCFloatingLabelFoundation, _super);
+
+    function MDCFloatingLabelFoundation(adapter) {
+      var _this = _super.call(this, __assign({}, MDCFloatingLabelFoundation.defaultAdapter, adapter)) || this;
+
+      _this.shakeAnimationEndHandler_ = function () {
+        return _this.handleShakeAnimationEnd_();
+      };
+
+      return _this;
+    }
+
+    Object.defineProperty(MDCFloatingLabelFoundation, "cssClasses", {
+      get: function () {
+        return cssClasses$2;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCFloatingLabelFoundation, "defaultAdapter", {
+      /**
+       * See {@link MDCFloatingLabelAdapter} for typing information on parameters and return types.
+       */
+      get: function () {
+        // tslint:disable:object-literal-sort-keys Methods should be in the same order as the adapter interface.
+        return {
+          addClass: function () {
+            return undefined;
+          },
+          removeClass: function () {
+            return undefined;
+          },
+          getWidth: function () {
+            return 0;
+          },
+          registerInteractionHandler: function () {
+            return undefined;
+          },
+          deregisterInteractionHandler: function () {
+            return undefined;
+          }
+        }; // tslint:enable:object-literal-sort-keys
+      },
+      enumerable: true,
+      configurable: true
+    });
+
+    MDCFloatingLabelFoundation.prototype.init = function () {
+      this.adapter_.registerInteractionHandler('animationend', this.shakeAnimationEndHandler_);
+    };
+
+    MDCFloatingLabelFoundation.prototype.destroy = function () {
+      this.adapter_.deregisterInteractionHandler('animationend', this.shakeAnimationEndHandler_);
+    };
+    /**
+     * Returns the width of the label element.
+     */
+
+
+    MDCFloatingLabelFoundation.prototype.getWidth = function () {
+      return this.adapter_.getWidth();
+    };
+    /**
+     * Styles the label to produce a shake animation to indicate an error.
+     * @param shouldShake If true, adds the shake CSS class; otherwise, removes shake class.
+     */
+
+
+    MDCFloatingLabelFoundation.prototype.shake = function (shouldShake) {
+      var LABEL_SHAKE = MDCFloatingLabelFoundation.cssClasses.LABEL_SHAKE;
+
+      if (shouldShake) {
+        this.adapter_.addClass(LABEL_SHAKE);
+      } else {
+        this.adapter_.removeClass(LABEL_SHAKE);
+      }
+    };
+    /**
+     * Styles the label to float or dock.
+     * @param shouldFloat If true, adds the float CSS class; otherwise, removes float and shake classes to dock the label.
+     */
+
+
+    MDCFloatingLabelFoundation.prototype.float = function (shouldFloat) {
+      var _a = MDCFloatingLabelFoundation.cssClasses,
+          LABEL_FLOAT_ABOVE = _a.LABEL_FLOAT_ABOVE,
+          LABEL_SHAKE = _a.LABEL_SHAKE;
+
+      if (shouldFloat) {
+        this.adapter_.addClass(LABEL_FLOAT_ABOVE);
+      } else {
+        this.adapter_.removeClass(LABEL_FLOAT_ABOVE);
+        this.adapter_.removeClass(LABEL_SHAKE);
+      }
+    };
+
+    MDCFloatingLabelFoundation.prototype.handleShakeAnimationEnd_ = function () {
+      var LABEL_SHAKE = MDCFloatingLabelFoundation.cssClasses.LABEL_SHAKE;
+      this.adapter_.removeClass(LABEL_SHAKE);
+    };
+
+    return MDCFloatingLabelFoundation;
+  }(MDCFoundation);
+
+  const createAdapter = labelElement => {
+    return {
+      addClass: className => labelElement.classList.add(className),
+      removeClass: className => labelElement.classList.remove(className),
+      getWidth: () => labelElement.scrollWidth,
+      registerInteractionHandler: (evtType, handler) => {
+        labelElement.addEventListener(evtType, handler);
+      },
+      deregisterInteractionHandler: (evtType, handler) => {
+        labelElement.removeEventListener(evtType, handler);
+      }
+    };
+  };
+
+  const partToFoundationMap = new WeakMap();
+  const floatingLabel = directive(label => part => {
+    const lastFoundation = partToFoundationMap.get(part);
+
+    if (!lastFoundation) {
+      const labelElement = part.committer.element;
+      labelElement.classList.add('mdc-floating-label');
+      const adapter = createAdapter(labelElement);
+      const foundation = new MDCFloatingLabelFoundation(adapter);
+      foundation.init();
+      part.setValue(foundation);
+      partToFoundationMap.set(part, {
+        label,
+        foundation
+      });
+    } else if (lastFoundation.label !== label) {
+      const labelElement = part.committer.element;
+      const labelChangeEvent = new Event('labelchange');
+      labelElement.dispatchEvent(labelChangeEvent);
+    }
+  });
+
+  /**
+   * @license
+   * Copyright 2018 Google Inc.
+   *
+   * Permission is hereby granted, free of charge, to any person obtaining a copy
+   * of this software and associated documentation files (the "Software"), to deal
+   * in the Software without restriction, including without limitation the rights
+   * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   * copies of the Software, and to permit persons to whom the Software is
+   * furnished to do so, subject to the following conditions:
+   *
+   * The above copyright notice and this permission notice shall be included in
+   * all copies or substantial portions of the Software.
+   *
+   * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   * THE SOFTWARE.
+   */
+  var cssClasses$3 = {
+    LINE_RIPPLE_ACTIVE: 'mdc-line-ripple--active',
+    LINE_RIPPLE_DEACTIVATING: 'mdc-line-ripple--deactivating'
+  };
+
+  /**
+   * @license
+   * Copyright 2018 Google Inc.
+   *
+   * Permission is hereby granted, free of charge, to any person obtaining a copy
+   * of this software and associated documentation files (the "Software"), to deal
+   * in the Software without restriction, including without limitation the rights
+   * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   * copies of the Software, and to permit persons to whom the Software is
+   * furnished to do so, subject to the following conditions:
+   *
+   * The above copyright notice and this permission notice shall be included in
+   * all copies or substantial portions of the Software.
+   *
+   * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   * THE SOFTWARE.
+   */
+
+  var MDCLineRippleFoundation =
+  /** @class */
+  function (_super) {
+    __extends(MDCLineRippleFoundation, _super);
+
+    function MDCLineRippleFoundation(adapter) {
+      var _this = _super.call(this, __assign({}, MDCLineRippleFoundation.defaultAdapter, adapter)) || this;
+
+      _this.transitionEndHandler_ = function (evt) {
+        return _this.handleTransitionEnd(evt);
+      };
+
+      return _this;
+    }
+
+    Object.defineProperty(MDCLineRippleFoundation, "cssClasses", {
+      get: function () {
+        return cssClasses$3;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCLineRippleFoundation, "defaultAdapter", {
+      /**
+       * See {@link MDCLineRippleAdapter} for typing information on parameters and return types.
+       */
+      get: function () {
+        // tslint:disable:object-literal-sort-keys Methods should be in the same order as the adapter interface.
+        return {
+          addClass: function () {
+            return undefined;
+          },
+          removeClass: function () {
+            return undefined;
+          },
+          hasClass: function () {
+            return false;
+          },
+          setStyle: function () {
+            return undefined;
+          },
+          registerEventHandler: function () {
+            return undefined;
+          },
+          deregisterEventHandler: function () {
+            return undefined;
+          }
+        }; // tslint:enable:object-literal-sort-keys
+      },
+      enumerable: true,
+      configurable: true
+    });
+
+    MDCLineRippleFoundation.prototype.init = function () {
+      this.adapter_.registerEventHandler('transitionend', this.transitionEndHandler_);
+    };
+
+    MDCLineRippleFoundation.prototype.destroy = function () {
+      this.adapter_.deregisterEventHandler('transitionend', this.transitionEndHandler_);
+    };
+
+    MDCLineRippleFoundation.prototype.activate = function () {
+      this.adapter_.removeClass(cssClasses$3.LINE_RIPPLE_DEACTIVATING);
+      this.adapter_.addClass(cssClasses$3.LINE_RIPPLE_ACTIVE);
+    };
+
+    MDCLineRippleFoundation.prototype.setRippleCenter = function (xCoordinate) {
+      this.adapter_.setStyle('transform-origin', xCoordinate + "px center");
+    };
+
+    MDCLineRippleFoundation.prototype.deactivate = function () {
+      this.adapter_.addClass(cssClasses$3.LINE_RIPPLE_DEACTIVATING);
+    };
+
+    MDCLineRippleFoundation.prototype.handleTransitionEnd = function (evt) {
+      // Wait for the line ripple to be either transparent or opaque
+      // before emitting the animation end event
+      var isDeactivating = this.adapter_.hasClass(cssClasses$3.LINE_RIPPLE_DEACTIVATING);
+
+      if (evt.propertyName === 'opacity') {
+        if (isDeactivating) {
+          this.adapter_.removeClass(cssClasses$3.LINE_RIPPLE_ACTIVE);
+          this.adapter_.removeClass(cssClasses$3.LINE_RIPPLE_DEACTIVATING);
+        }
+      }
+    };
+
+    return MDCLineRippleFoundation;
+  }(MDCFoundation);
+
+  const createAdapter$1 = lineElement => {
+    return {
+      addClass: className => lineElement.classList.add(className),
+      removeClass: className => lineElement.classList.remove(className),
+      hasClass: className => lineElement.classList.contains(className),
+      setStyle: (propertyName, value) => lineElement.style.setProperty(propertyName, value),
+      registerEventHandler: (evtType, handler) => {
+        lineElement.addEventListener(evtType, handler);
+      },
+      deregisterEventHandler: (evtType, handler) => {
+        lineElement.removeEventListener(evtType, handler);
+      }
+    };
+  };
+
+  const partToFoundationMap$1 = new WeakMap();
+  const lineRipple = directive(() => part => {
+    const lastFoundation = partToFoundationMap$1.get(part);
+
+    if (!lastFoundation) {
+      const lineElement = part.committer.element;
+      lineElement.classList.add('mdc-line-ripple');
+      const adapter = createAdapter$1(lineElement);
+      const foundation = new MDCLineRippleFoundation(adapter);
+      foundation.init();
+      part.setValue(foundation);
+      partToFoundationMap$1.set(part, foundation);
+    }
+  });
+
+  /**
+   * @license
+   * Copyright 2016 Google Inc.
+   *
+   * Permission is hereby granted, free of charge, to any person obtaining a copy
+   * of this software and associated documentation files (the "Software"), to deal
+   * in the Software without restriction, including without limitation the rights
+   * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   * copies of the Software, and to permit persons to whom the Software is
+   * furnished to do so, subject to the following conditions:
+   *
+   * The above copyright notice and this permission notice shall be included in
+   * all copies or substantial portions of the Software.
+   *
+   * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   * THE SOFTWARE.
+   */
+  var strings$2 = {
+    ARIA_CONTROLS: 'aria-controls',
+    ICON_SELECTOR: '.mdc-text-field__icon',
+    INPUT_SELECTOR: '.mdc-text-field__input',
+    LABEL_SELECTOR: '.mdc-floating-label',
+    LINE_RIPPLE_SELECTOR: '.mdc-line-ripple',
+    OUTLINE_SELECTOR: '.mdc-notched-outline'
+  };
+  var cssClasses$4 = {
+    DENSE: 'mdc-text-field--dense',
+    DISABLED: 'mdc-text-field--disabled',
+    FOCUSED: 'mdc-text-field--focused',
+    FULLWIDTH: 'mdc-text-field--fullwidth',
+    HELPER_LINE: 'mdc-text-field-helper-line',
+    INVALID: 'mdc-text-field--invalid',
+    NO_LABEL: 'mdc-text-field--no-label',
+    OUTLINED: 'mdc-text-field--outlined',
+    ROOT: 'mdc-text-field',
+    TEXTAREA: 'mdc-text-field--textarea',
+    WITH_LEADING_ICON: 'mdc-text-field--with-leading-icon',
+    WITH_TRAILING_ICON: 'mdc-text-field--with-trailing-icon'
+  };
+  var numbers$2 = {
+    DENSE_LABEL_SCALE: 0.923,
+    LABEL_SCALE: 0.75
+  };
+  /**
+   * Whitelist based off of https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/HTML5/Constraint_validation
+   * under the "Validation-related attributes" section.
+   */
+
+  var VALIDATION_ATTR_WHITELIST = ['pattern', 'min', 'max', 'required', 'step', 'minlength', 'maxlength'];
+  /**
+   * Label should always float for these types as they show some UI even if value is empty.
+   */
+
+  var ALWAYS_FLOAT_TYPES = ['color', 'date', 'datetime-local', 'month', 'range', 'time', 'week'];
+
+  /**
+   * @license
+   * Copyright 2016 Google Inc.
+   *
+   * Permission is hereby granted, free of charge, to any person obtaining a copy
+   * of this software and associated documentation files (the "Software"), to deal
+   * in the Software without restriction, including without limitation the rights
+   * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   * copies of the Software, and to permit persons to whom the Software is
+   * furnished to do so, subject to the following conditions:
+   *
+   * The above copyright notice and this permission notice shall be included in
+   * all copies or substantial portions of the Software.
+   *
+   * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   * THE SOFTWARE.
+   */
+  var POINTERDOWN_EVENTS = ['mousedown', 'touchstart'];
+  var INTERACTION_EVENTS = ['click', 'keydown'];
+
+  var MDCTextFieldFoundation =
+  /** @class */
+  function (_super) {
+    __extends(MDCTextFieldFoundation, _super);
+    /**
+     * @param adapter
+     * @param foundationMap Map from subcomponent names to their subfoundations.
+     */
+
+
+    function MDCTextFieldFoundation(adapter, foundationMap) {
+      if (foundationMap === void 0) {
+        foundationMap = {};
+      }
+
+      var _this = _super.call(this, __assign({}, MDCTextFieldFoundation.defaultAdapter, adapter)) || this;
+
+      _this.isFocused_ = false;
+      _this.receivedUserInput_ = false;
+      _this.isValid_ = true;
+      _this.useNativeValidation_ = true;
+      _this.helperText_ = foundationMap.helperText;
+      _this.characterCounter_ = foundationMap.characterCounter;
+      _this.leadingIcon_ = foundationMap.leadingIcon;
+      _this.trailingIcon_ = foundationMap.trailingIcon;
+
+      _this.inputFocusHandler_ = function () {
+        return _this.activateFocus();
+      };
+
+      _this.inputBlurHandler_ = function () {
+        return _this.deactivateFocus();
+      };
+
+      _this.inputInputHandler_ = function () {
+        return _this.handleInput();
+      };
+
+      _this.setPointerXOffset_ = function (evt) {
+        return _this.setTransformOrigin(evt);
+      };
+
+      _this.textFieldInteractionHandler_ = function () {
+        return _this.handleTextFieldInteraction();
+      };
+
+      _this.validationAttributeChangeHandler_ = function (attributesList) {
+        return _this.handleValidationAttributeChange(attributesList);
+      };
+
+      return _this;
+    }
+
+    Object.defineProperty(MDCTextFieldFoundation, "cssClasses", {
+      get: function () {
+        return cssClasses$4;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCTextFieldFoundation, "strings", {
+      get: function () {
+        return strings$2;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCTextFieldFoundation, "numbers", {
+      get: function () {
+        return numbers$2;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCTextFieldFoundation.prototype, "shouldAlwaysFloat_", {
+      get: function () {
+        var type = this.getNativeInput_().type;
+        return ALWAYS_FLOAT_TYPES.indexOf(type) >= 0;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCTextFieldFoundation.prototype, "shouldFloat", {
+      get: function () {
+        return this.shouldAlwaysFloat_ || this.isFocused_ || !!this.getValue() || this.isBadInput_();
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCTextFieldFoundation.prototype, "shouldShake", {
+      get: function () {
+        return !this.isFocused_ && !this.isValid() && !!this.getValue();
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCTextFieldFoundation, "defaultAdapter", {
+      /**
+       * See {@link MDCTextFieldAdapter} for typing information on parameters and return types.
+       */
+      get: function () {
+        // tslint:disable:object-literal-sort-keys Methods should be in the same order as the adapter interface.
+        return {
+          addClass: function () {
+            return undefined;
+          },
+          removeClass: function () {
+            return undefined;
+          },
+          hasClass: function () {
+            return true;
+          },
+          registerTextFieldInteractionHandler: function () {
+            return undefined;
+          },
+          deregisterTextFieldInteractionHandler: function () {
+            return undefined;
+          },
+          registerInputInteractionHandler: function () {
+            return undefined;
+          },
+          deregisterInputInteractionHandler: function () {
+            return undefined;
+          },
+          registerValidationAttributeChangeHandler: function () {
+            return new MutationObserver(function () {
+              return undefined;
+            });
+          },
+          deregisterValidationAttributeChangeHandler: function () {
+            return undefined;
+          },
+          getNativeInput: function () {
+            return null;
+          },
+          isFocused: function () {
+            return false;
+          },
+          activateLineRipple: function () {
+            return undefined;
+          },
+          deactivateLineRipple: function () {
+            return undefined;
+          },
+          setLineRippleTransformOrigin: function () {
+            return undefined;
+          },
+          shakeLabel: function () {
+            return undefined;
+          },
+          floatLabel: function () {
+            return undefined;
+          },
+          hasLabel: function () {
+            return false;
+          },
+          getLabelWidth: function () {
+            return 0;
+          },
+          hasOutline: function () {
+            return false;
+          },
+          notchOutline: function () {
+            return undefined;
+          },
+          closeOutline: function () {
+            return undefined;
+          }
+        }; // tslint:enable:object-literal-sort-keys
+      },
+      enumerable: true,
+      configurable: true
+    });
+
+    MDCTextFieldFoundation.prototype.init = function () {
+      var _this = this;
+
+      if (this.adapter_.isFocused()) {
+        this.inputFocusHandler_();
+      } else if (this.adapter_.hasLabel() && this.shouldFloat) {
+        this.notchOutline(true);
+        this.adapter_.floatLabel(true);
+      }
+
+      this.adapter_.registerInputInteractionHandler('focus', this.inputFocusHandler_);
+      this.adapter_.registerInputInteractionHandler('blur', this.inputBlurHandler_);
+      this.adapter_.registerInputInteractionHandler('input', this.inputInputHandler_);
+      POINTERDOWN_EVENTS.forEach(function (evtType) {
+        _this.adapter_.registerInputInteractionHandler(evtType, _this.setPointerXOffset_);
+      });
+      INTERACTION_EVENTS.forEach(function (evtType) {
+        _this.adapter_.registerTextFieldInteractionHandler(evtType, _this.textFieldInteractionHandler_);
+      });
+      this.validationObserver_ = this.adapter_.registerValidationAttributeChangeHandler(this.validationAttributeChangeHandler_);
+      this.setCharacterCounter_(this.getValue().length);
+    };
+
+    MDCTextFieldFoundation.prototype.destroy = function () {
+      var _this = this;
+
+      this.adapter_.deregisterInputInteractionHandler('focus', this.inputFocusHandler_);
+      this.adapter_.deregisterInputInteractionHandler('blur', this.inputBlurHandler_);
+      this.adapter_.deregisterInputInteractionHandler('input', this.inputInputHandler_);
+      POINTERDOWN_EVENTS.forEach(function (evtType) {
+        _this.adapter_.deregisterInputInteractionHandler(evtType, _this.setPointerXOffset_);
+      });
+      INTERACTION_EVENTS.forEach(function (evtType) {
+        _this.adapter_.deregisterTextFieldInteractionHandler(evtType, _this.textFieldInteractionHandler_);
+      });
+      this.adapter_.deregisterValidationAttributeChangeHandler(this.validationObserver_);
+    };
+    /**
+     * Handles user interactions with the Text Field.
+     */
+
+
+    MDCTextFieldFoundation.prototype.handleTextFieldInteraction = function () {
+      var nativeInput = this.adapter_.getNativeInput();
+
+      if (nativeInput && nativeInput.disabled) {
+        return;
+      }
+
+      this.receivedUserInput_ = true;
+    };
+    /**
+     * Handles validation attribute changes
+     */
+
+
+    MDCTextFieldFoundation.prototype.handleValidationAttributeChange = function (attributesList) {
+      var _this = this;
+
+      attributesList.some(function (attributeName) {
+        if (VALIDATION_ATTR_WHITELIST.indexOf(attributeName) > -1) {
+          _this.styleValidity_(true);
+
+          return true;
+        }
+
+        return false;
+      });
+
+      if (attributesList.indexOf('maxlength') > -1) {
+        this.setCharacterCounter_(this.getValue().length);
+      }
+    };
+    /**
+     * Opens/closes the notched outline.
+     */
+
+
+    MDCTextFieldFoundation.prototype.notchOutline = function (openNotch) {
+      if (!this.adapter_.hasOutline()) {
+        return;
+      }
+
+      if (openNotch) {
+        var isDense = this.adapter_.hasClass(cssClasses$4.DENSE);
+        var labelScale = isDense ? numbers$2.DENSE_LABEL_SCALE : numbers$2.LABEL_SCALE;
+        var labelWidth = this.adapter_.getLabelWidth() * labelScale;
+        this.adapter_.notchOutline(labelWidth);
+      } else {
+        this.adapter_.closeOutline();
+      }
+    };
+    /**
+     * Activates the text field focus state.
+     */
+
+
+    MDCTextFieldFoundation.prototype.activateFocus = function () {
+      this.isFocused_ = true;
+      this.styleFocused_(this.isFocused_);
+      this.adapter_.activateLineRipple();
+
+      if (this.adapter_.hasLabel()) {
+        this.notchOutline(this.shouldFloat);
+        this.adapter_.floatLabel(this.shouldFloat);
+        this.adapter_.shakeLabel(this.shouldShake);
+      }
+
+      if (this.helperText_) {
+        this.helperText_.showToScreenReader();
+      }
+    };
+    /**
+     * Sets the line ripple's transform origin, so that the line ripple activate
+     * animation will animate out from the user's click location.
+     */
+
+
+    MDCTextFieldFoundation.prototype.setTransformOrigin = function (evt) {
+      var touches = evt.touches;
+      var targetEvent = touches ? touches[0] : evt;
+      var targetClientRect = targetEvent.target.getBoundingClientRect();
+      var normalizedX = targetEvent.clientX - targetClientRect.left;
+      this.adapter_.setLineRippleTransformOrigin(normalizedX);
+    };
+    /**
+     * Handles input change of text input and text area.
+     */
+
+
+    MDCTextFieldFoundation.prototype.handleInput = function () {
+      this.autoCompleteFocus();
+      this.setCharacterCounter_(this.getValue().length);
+    };
+    /**
+     * Activates the Text Field's focus state in cases when the input value
+     * changes without user input (e.g. programmatically).
+     */
+
+
+    MDCTextFieldFoundation.prototype.autoCompleteFocus = function () {
+      if (!this.receivedUserInput_) {
+        this.activateFocus();
+      }
+    };
+    /**
+     * Deactivates the Text Field's focus state.
+     */
+
+
+    MDCTextFieldFoundation.prototype.deactivateFocus = function () {
+      this.isFocused_ = false;
+      this.adapter_.deactivateLineRipple();
+      var isValid = this.isValid();
+      this.styleValidity_(isValid);
+      this.styleFocused_(this.isFocused_);
+
+      if (this.adapter_.hasLabel()) {
+        this.notchOutline(this.shouldFloat);
+        this.adapter_.floatLabel(this.shouldFloat);
+        this.adapter_.shakeLabel(this.shouldShake);
+      }
+
+      if (!this.shouldFloat) {
+        this.receivedUserInput_ = false;
+      }
+    };
+
+    MDCTextFieldFoundation.prototype.getValue = function () {
+      return this.getNativeInput_().value;
+    };
+    /**
+     * @param value The value to set on the input Element.
+     */
+
+
+    MDCTextFieldFoundation.prototype.setValue = function (value) {
+      // Prevent Safari from moving the caret to the end of the input when the value has not changed.
+      if (this.getValue() !== value) {
+        this.getNativeInput_().value = value;
+      }
+
+      this.setCharacterCounter_(value.length);
+      var isValid = this.isValid();
+      this.styleValidity_(isValid);
+
+      if (this.adapter_.hasLabel()) {
+        this.notchOutline(this.shouldFloat);
+        this.adapter_.floatLabel(this.shouldFloat);
+        this.adapter_.shakeLabel(this.shouldShake);
+      }
+    };
+    /**
+     * @return The custom validity state, if set; otherwise, the result of a native validity check.
+     */
+
+
+    MDCTextFieldFoundation.prototype.isValid = function () {
+      return this.useNativeValidation_ ? this.isNativeInputValid_() : this.isValid_;
+    };
+    /**
+     * @param isValid Sets the custom validity state of the Text Field.
+     */
+
+
+    MDCTextFieldFoundation.prototype.setValid = function (isValid) {
+      this.isValid_ = isValid;
+      this.styleValidity_(isValid);
+      var shouldShake = !isValid && !this.isFocused_ && !!this.getValue();
+
+      if (this.adapter_.hasLabel()) {
+        this.adapter_.shakeLabel(shouldShake);
+      }
+    };
+    /**
+     * Enables or disables the use of native validation. Use this for custom validation.
+     * @param useNativeValidation Set this to false to ignore native input validation.
+     */
+
+
+    MDCTextFieldFoundation.prototype.setUseNativeValidation = function (useNativeValidation) {
+      this.useNativeValidation_ = useNativeValidation;
+    };
+
+    MDCTextFieldFoundation.prototype.isDisabled = function () {
+      return this.getNativeInput_().disabled;
+    };
+    /**
+     * @param disabled Sets the text-field disabled or enabled.
+     */
+
+
+    MDCTextFieldFoundation.prototype.setDisabled = function (disabled) {
+      this.getNativeInput_().disabled = disabled;
+      this.styleDisabled_(disabled);
+    };
+    /**
+     * @param content Sets the content of the helper text.
+     */
+
+
+    MDCTextFieldFoundation.prototype.setHelperTextContent = function (content) {
+      if (this.helperText_) {
+        this.helperText_.setContent(content);
+      }
+    };
+    /**
+     * Sets the aria label of the leading icon.
+     */
+
+
+    MDCTextFieldFoundation.prototype.setLeadingIconAriaLabel = function (label) {
+      if (this.leadingIcon_) {
+        this.leadingIcon_.setAriaLabel(label);
+      }
+    };
+    /**
+     * Sets the text content of the leading icon.
+     */
+
+
+    MDCTextFieldFoundation.prototype.setLeadingIconContent = function (content) {
+      if (this.leadingIcon_) {
+        this.leadingIcon_.setContent(content);
+      }
+    };
+    /**
+     * Sets the aria label of the trailing icon.
+     */
+
+
+    MDCTextFieldFoundation.prototype.setTrailingIconAriaLabel = function (label) {
+      if (this.trailingIcon_) {
+        this.trailingIcon_.setAriaLabel(label);
+      }
+    };
+    /**
+     * Sets the text content of the trailing icon.
+     */
+
+
+    MDCTextFieldFoundation.prototype.setTrailingIconContent = function (content) {
+      if (this.trailingIcon_) {
+        this.trailingIcon_.setContent(content);
+      }
+    };
+    /**
+     * Sets character counter values that shows characters used and the total character limit.
+     */
+
+
+    MDCTextFieldFoundation.prototype.setCharacterCounter_ = function (currentLength) {
+      if (!this.characterCounter_) {
+        return;
+      }
+
+      var maxLength = this.getNativeInput_().maxLength;
+
+      if (maxLength === -1) {
+        throw new Error('MDCTextFieldFoundation: Expected maxlength html property on text input or textarea.');
+      }
+
+      this.characterCounter_.setCounterValue(currentLength, maxLength);
+    };
+    /**
+     * @return True if the Text Field input fails in converting the user-supplied value.
+     */
+
+
+    MDCTextFieldFoundation.prototype.isBadInput_ = function () {
+      // The badInput property is not supported in IE 11 💩.
+      return this.getNativeInput_().validity.badInput || false;
+    };
+    /**
+     * @return The result of native validity checking (ValidityState.valid).
+     */
+
+
+    MDCTextFieldFoundation.prototype.isNativeInputValid_ = function () {
+      return this.getNativeInput_().validity.valid;
+    };
+    /**
+     * Styles the component based on the validity state.
+     */
+
+
+    MDCTextFieldFoundation.prototype.styleValidity_ = function (isValid) {
+      var INVALID = MDCTextFieldFoundation.cssClasses.INVALID;
+
+      if (isValid) {
+        this.adapter_.removeClass(INVALID);
+      } else {
+        this.adapter_.addClass(INVALID);
+      }
+
+      if (this.helperText_) {
+        this.helperText_.setValidity(isValid);
+      }
+    };
+    /**
+     * Styles the component based on the focused state.
+     */
+
+
+    MDCTextFieldFoundation.prototype.styleFocused_ = function (isFocused) {
+      var FOCUSED = MDCTextFieldFoundation.cssClasses.FOCUSED;
+
+      if (isFocused) {
+        this.adapter_.addClass(FOCUSED);
+      } else {
+        this.adapter_.removeClass(FOCUSED);
+      }
+    };
+    /**
+     * Styles the component based on the disabled state.
+     */
+
+
+    MDCTextFieldFoundation.prototype.styleDisabled_ = function (isDisabled) {
+      var _a = MDCTextFieldFoundation.cssClasses,
+          DISABLED = _a.DISABLED,
+          INVALID = _a.INVALID;
+
+      if (isDisabled) {
+        this.adapter_.addClass(DISABLED);
+        this.adapter_.removeClass(INVALID);
+      } else {
+        this.adapter_.removeClass(DISABLED);
+      }
+
+      if (this.leadingIcon_) {
+        this.leadingIcon_.setDisabled(isDisabled);
+      }
+
+      if (this.trailingIcon_) {
+        this.trailingIcon_.setDisabled(isDisabled);
+      }
+    };
+    /**
+     * @return The native text input element from the host environment, or an object with the same shape for unit tests.
+     */
+
+
+    MDCTextFieldFoundation.prototype.getNativeInput_ = function () {
+      // this.adapter_ may be undefined in foundation unit tests. This happens when testdouble is creating a mock object
+      // and invokes the shouldShake/shouldFloat getters (which in turn call getValue(), which calls this method) before
+      // init() has been called from the MDCTextField constructor. To work around that issue, we return a dummy object.
+      var nativeInput = this.adapter_ ? this.adapter_.getNativeInput() : null;
+      return nativeInput || {
+        disabled: false,
+        maxLength: -1,
+        type: 'input',
+        validity: {
+          badInput: false,
+          valid: true
+        },
+        value: ''
+      };
+    };
+
+    return MDCTextFieldFoundation;
+  }(MDCFoundation);
+
+  /**
+   * @license
+   * Copyright (c) 2018 The Polymer Project Authors. All rights reserved.
+   * This code may only be used under the BSD style license found at
+   * http://polymer.github.io/LICENSE.txt
+   * The complete set of authors may be found at
+   * http://polymer.github.io/AUTHORS.txt
+   * The complete set of contributors may be found at
+   * http://polymer.github.io/CONTRIBUTORS.txt
+   * Code distributed by Google as part of the polymer project is also
+   * subject to an additional IP rights grant found at
+   * http://polymer.github.io/PATENTS.txt
+   */
+  /**
+   * For AttributeParts, sets the attribute if the value is defined and removes
+   * the attribute if the value is undefined.
+   *
+   * For other part types, this directive is a no-op.
+   */
+
+  const ifDefined = directive(value => part => {
+    if (value === undefined && part instanceof AttributePart) {
+      if (value !== part.value) {
+        const name = part.committer.name;
+        part.committer.element.removeAttribute(name);
+      }
+    } else {
+      part.setValue(value);
+    }
+  });
+
+  /**
+   * @license
+   * Copyright 2019 Google Inc.
+   *
+   * Permission is hereby granted, free of charge, to any person obtaining a copy
+   * of this software and associated documentation files (the "Software"), to deal
+   * in the Software without restriction, including without limitation the rights
+   * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   * copies of the Software, and to permit persons to whom the Software is
+   * furnished to do so, subject to the following conditions:
+   *
+   * The above copyright notice and this permission notice shall be included in
+   * all copies or substantial portions of the Software.
+   *
+   * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   * THE SOFTWARE.
+   */
+  var cssClasses$5 = {
+    ROOT: 'mdc-text-field-character-counter'
+  };
+  var strings$3 = {
+    ROOT_SELECTOR: "." + cssClasses$5.ROOT
+  };
+
+  /**
+   * @license
+   * Copyright 2019 Google Inc.
+   *
+   * Permission is hereby granted, free of charge, to any person obtaining a copy
+   * of this software and associated documentation files (the "Software"), to deal
+   * in the Software without restriction, including without limitation the rights
+   * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   * copies of the Software, and to permit persons to whom the Software is
+   * furnished to do so, subject to the following conditions:
+   *
+   * The above copyright notice and this permission notice shall be included in
+   * all copies or substantial portions of the Software.
+   *
+   * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   * THE SOFTWARE.
+   */
+
+  var MDCTextFieldCharacterCounterFoundation =
+  /** @class */
+  function (_super) {
+    __extends(MDCTextFieldCharacterCounterFoundation, _super);
+
+    function MDCTextFieldCharacterCounterFoundation(adapter) {
+      return _super.call(this, __assign({}, MDCTextFieldCharacterCounterFoundation.defaultAdapter, adapter)) || this;
+    }
+
+    Object.defineProperty(MDCTextFieldCharacterCounterFoundation, "cssClasses", {
+      get: function () {
+        return cssClasses$5;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCTextFieldCharacterCounterFoundation, "strings", {
+      get: function () {
+        return strings$3;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCTextFieldCharacterCounterFoundation, "defaultAdapter", {
+      /**
+       * See {@link MDCTextFieldCharacterCounterAdapter} for typing information on parameters and return types.
+       */
+      get: function () {
+        return {
+          setContent: function () {
+            return undefined;
+          }
+        };
+      },
+      enumerable: true,
+      configurable: true
+    });
+
+    MDCTextFieldCharacterCounterFoundation.prototype.setCounterValue = function (currentLength, maxLength) {
+      currentLength = Math.min(currentLength, maxLength);
+      this.adapter_.setContent(currentLength + " / " + maxLength);
+    };
+
+    return MDCTextFieldCharacterCounterFoundation;
+  }(MDCFoundation);
+
+  const createAdapter$2 = hostElement => {
+    return {
+      setContent: content => hostElement.textContent = content
+    };
+  };
+
+  const partToFoundationMap$2 = new WeakMap();
+  const characterCounter = directive(() => part => {
+    const lastFoundation = partToFoundationMap$2.get(part);
+
+    if (!lastFoundation) {
+      const hostElement = part.committer.element;
+      hostElement.classList.add('mdc-text-field-character-counter');
+      const adapter = createAdapter$2(hostElement);
+      const foundation = new MDCTextFieldCharacterCounterFoundation(adapter);
+      foundation.init();
+      part.setValue(foundation);
+      partToFoundationMap$2.set(part, foundation);
+    }
+  });
+
+  const passiveEvents = ['touchstart', 'touchmove', 'scroll', 'mousewheel'];
+
+  const createValidityObj = (customValidity = {}) => {
+    /*
+     * We need to make ValidityState an object because it is readonly and
+     * we cannot use the spread operator. Also, we don't export
+     * `CustomValidityState` because it is a leaky implementation and the user
+     * already has access to `ValidityState` in lib.dom.ts. Also an interface
+     * {a: Type} can be casted to {readonly a: Type} so passing any object
+     * should be fine.
+     */
+    const objectifiedCustomValidity = {}; // eslint-disable-next-line guard-for-in
+
+    for (const propName in customValidity) {
+      /*
+       * Casting is needed because ValidityState's props are all readonly and
+       * thus cannot be set on `onjectifiedCustomValidity`. In the end, the
+       * interface is the same as ValidityState (but not readonly), but the
+       * function signature casts the output to ValidityState (thus readonly).
+       */
+      objectifiedCustomValidity[propName] = customValidity[propName];
+    }
+
+    return Object.assign({
+      badInput: false,
+      customError: false,
+      patternMismatch: false,
+      rangeOverflow: false,
+      rangeUnderflow: false,
+      stepMismatch: false,
+      tooLong: false,
+      tooShort: false,
+      typeMismatch: false,
+      valid: true,
+      valueMissing: false
+    }, objectifiedCustomValidity);
+  };
+
+  class TextFieldBase extends FormElement {
+    constructor() {
+      super(...arguments);
+      this.mdcFoundationClass = MDCTextFieldFoundation;
+      this.value = '';
+      this.type = 'text';
+      this.placeholder = '';
+      this.label = '';
+      this.icon = '';
+      this.iconTrailing = '';
+      this.disabled = false;
+      this.required = false;
+      this.maxLength = -1;
+      this.outlined = false;
+      this.fullWidth = false;
+      this.helper = '';
+      this.validateOnInitialRender = false;
+      this.validationMessage = '';
+      this.pattern = '';
+      this.min = '';
+      this.max = '';
+      this.step = null;
+      this.helperPersistent = false;
+      this.charCounter = false;
+      this.outlineOpen = false;
+      this.outlineWidth = 0;
+      this.isUiValid = true;
+      this._validity = createValidityObj();
+      this._outlineUpdateComplete = null;
+      this.validityTransform = null;
+    }
+
+    get validity() {
+      this._checkValidity(this.value);
+
+      return this._validity;
+    }
+
+    get willValidate() {
+      return this.formElement.willValidate;
+    }
+
+    get selectionStart() {
+      return this.formElement.selectionStart;
+    }
+
+    get selectionEnd() {
+      return this.formElement.selectionEnd;
+    }
+
+    get shouldRenderHelperText() {
+      return !!this.helper || !!this.validationMessage || this.charCounterVisible;
+    }
+
+    get charCounterVisible() {
+      return this.charCounter && this.maxLength !== -1;
+    }
+
+    focus() {
+      const focusEvt = new CustomEvent('focus');
+      this.formElement.dispatchEvent(focusEvt);
+      this.formElement.focus();
+    }
+
+    blur() {
+      const blurEvt = new CustomEvent('blur');
+      this.formElement.dispatchEvent(blurEvt);
+      this.formElement.blur();
+    }
+
+    select() {
+      this.formElement.select();
+    }
+
+    setSelectionRange(selectionStart, selectionEnd, selectionDirection) {
+      this.formElement.setSelectionRange(selectionStart, selectionEnd, selectionDirection);
+    }
+
+    render() {
+      const classes = {
+        'mdc-text-field--disabled': this.disabled,
+        'mdc-text-field--no-label': !this.label,
+        'mdc-text-field--outlined': this.outlined,
+        'mdc-text-field--fullwidth': this.fullWidth,
+        'mdc-text-field--with-leading-icon': this.icon,
+        'mdc-text-field--with-trailing-icon': this.iconTrailing
+      };
+      return html`
+      <div class="mdc-text-field ${classMap(classes)}">
+        ${this.icon ? this.renderIcon(this.icon) : ''}
+        ${this.renderInput()}
+        ${this.iconTrailing ? this.renderIcon(this.iconTrailing) : ''}
+        ${this.outlined ? this.renderOutlined() : this.renderLabelText()}
+      </div>
+      ${this.renderHelperText(this.renderCharCounter())}
+    `;
+    }
+
+    updated(changedProperties) {
+      const maxLength = changedProperties.get('maxLength');
+      const maxLengthBecameDefined = maxLength === -1 && this.maxLength !== -1;
+      const maxLengthBecameUndefined = maxLength !== undefined && maxLength !== -1 && this.maxLength === -1;
+      /* We want to recreate the foundation if maxLength changes to defined or
+       * undefined, because the textfield foundation needs to be instantiated with
+       * the char counter's foundation, and the char counter's foundation needs
+       * to have maxLength defined to be instantiated. Additionally, there is no
+       * exposed API on the MdcTextFieldFoundation to dynamically add a char
+       * counter foundation, so we must recreate it.
+       */
+
+      if (maxLengthBecameDefined || maxLengthBecameUndefined) {
+        this.createFoundation();
+      }
+
+      if (changedProperties.has('value') && changedProperties.get('value') !== undefined) {
+        this.mdcFoundation.setValue(this.value);
+      }
+    }
+
+    renderInput() {
+      const maxOrUndef = this.maxLength === -1 ? undefined : this.maxLength;
+      return html`
+      <input
+          id="text-field"
+          class="mdc-text-field__input"
+          type="${this.type}"
+          .value="${this.value}"
+          ?disabled="${this.disabled}"
+          placeholder="${this.placeholder}"
+          ?required="${this.required}"
+          maxlength="${ifDefined(maxOrUndef)}"
+          pattern="${ifDefined(this.pattern ? this.pattern : undefined)}"
+          min="${ifDefined(this.min === '' ? undefined : this.min)}"
+          max="${ifDefined(this.max === '' ? undefined : this.max)}"
+          step="${ifDefined(this.step === null ? undefined : this.step)}"
+          @input="${this.handleInputChange}"
+          @blur="${this.onInputBlur}">`;
+    }
+
+    renderIcon(icon) {
+      return html`<i class="material-icons mdc-text-field__icon">${icon}</i>`;
+    }
+
+    renderOutlined() {
+      let labelTemplate = '';
+
+      if (this.label) {
+        labelTemplate = html`
+        <label
+            .floatingLabelFoundation=${floatingLabel(this.label)}
+            @labelchange=${this.onLabelChange}
+            for="text-field">
+          ${this.label}
+        </label>
+      `;
+      }
+
+      return html`
+      <mwc-notched-outline
+          .width=${this.outlineWidth}
+          .open=${this.outlineOpen}
+          class="mdc-notched-outline">
+        ${labelTemplate}
+      </mwc-notched-outline>`;
+    }
+
+    renderLabelText() {
+      let labelTemplate = '';
+
+      if (this.label && !this.fullWidth) {
+        labelTemplate = html`
+      <label
+          .floatingLabelFoundation=${floatingLabel(this.label)}
+          for="text-field">
+        ${this.label}
+      </label>`;
+      }
+
+      return html`
+      ${labelTemplate}
+      <div .lineRippleFoundation=${lineRipple()}></div>
+    `;
+    }
+
+    renderHelperText(charCounterTemplate) {
+      const showValidationMessage = this.validationMessage && !this.isUiValid;
+      const classes = {
+        'mdc-text-field-helper-text--persistent': this.helperPersistent,
+        'mdc-text-field-helper-text--validation-msg': showValidationMessage
+      };
+      const rootClasses = {
+        hidden: !this.shouldRenderHelperText
+      };
+      return html`
+      <div class="mdc-text-field-helper-line ${classMap(rootClasses)}">
+        <div class="mdc-text-field-helper-text ${classMap(classes)}">
+          ${showValidationMessage ? this.validationMessage : this.helper}
+        </div>
+        ${charCounterTemplate}
+      </div>
+    `;
+    }
+
+    renderCharCounter() {
+      const counterClasses = {
+        hidden: !this.charCounterVisible
+      };
+      return html`
+      <div
+          class="${classMap(counterClasses)}"
+          .charCounterFoundation=${characterCounter()}>
+      </div>`;
+    }
+
+    onInputBlur() {
+      this.reportValidity();
+    }
+
+    checkValidity() {
+      const isValid = this._checkValidity(this.value);
+
+      if (!isValid) {
+        const invalidEvent = new Event('invalid', {
+          bubbles: false,
+          cancelable: true
+        });
+        this.dispatchEvent(invalidEvent);
+      }
+
+      return isValid;
+    }
+
+    reportValidity() {
+      const isValid = this.checkValidity();
+      this.mdcFoundation.setValid(isValid);
+      this.isUiValid = isValid;
+      return isValid;
+    }
+
+    _checkValidity(value) {
+      const nativeValidity = this.formElement.validity;
+      let validity = createValidityObj(nativeValidity);
+
+      if (this.validityTransform) {
+        const customValidity = this.validityTransform(value, validity);
+        validity = Object.assign(Object.assign({}, validity), customValidity);
+        this.mdcFoundation.setUseNativeValidation(false);
+      } else {
+        this.mdcFoundation.setUseNativeValidation(true);
+      }
+
+      this._validity = validity;
+      return this._validity.valid;
+    }
+
+    setCustomValidity(message) {
+      this.validationMessage = message;
+      this.formElement.setCustomValidity(message);
+    }
+
+    handleInputChange() {
+      this.value = this.formElement.value;
+    }
+
+    createFoundation() {
+      if (this.mdcFoundation !== undefined) {
+        this.mdcFoundation.destroy();
+      }
+
+      this.mdcFoundation = new this.mdcFoundationClass(this.createAdapter(), {
+        characterCounter: this.maxLength !== -1 ? this.charCounterElement.charCounterFoundation : undefined
+      });
+      this.mdcFoundation.init();
+    }
+
+    createAdapter() {
+      return Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, this.getRootAdapterMethods()), this.getInputAdapterMethods()), this.getLabelAdapterMethods()), this.getLineRippleAdapterMethods()), this.getOutlineAdapterMethods());
+    }
+
+    getRootAdapterMethods() {
+      return Object.assign({
+        registerTextFieldInteractionHandler: (evtType, handler) => this.addEventListener(evtType, handler),
+        deregisterTextFieldInteractionHandler: (evtType, handler) => this.removeEventListener(evtType, handler),
+        registerValidationAttributeChangeHandler: () => {
+          const getAttributesList = mutationsList => {
+            return mutationsList.map(mutation => mutation.attributeName).filter(attributeName => attributeName);
+          };
+
+          const observer = new MutationObserver(mutationsList => {
+            const attributes = getAttributesList(mutationsList);
+
+            if (attributes.indexOf('maxlength') !== -1 && this.maxLength !== -1) {
+              this.charCounterElement.charCounterFoundation.setCounterValue(this.value.length, this.maxLength);
+            }
+          });
+          const config = {
+            attributes: true
+          };
+          observer.observe(this.formElement, config);
+          return observer;
+        },
+        deregisterValidationAttributeChangeHandler: observer => observer.disconnect()
+      }, addHasRemoveClass(this.mdcRoot));
+    }
+
+    getInputAdapterMethods() {
+      return {
+        getNativeInput: () => this.formElement,
+        isFocused: () => this.shadowRoot ? this.shadowRoot.activeElement === this.formElement : false,
+        registerInputInteractionHandler: (evtType, handler) => this.formElement.addEventListener(evtType, handler, {
+          passive: evtType in passiveEvents
+        }),
+        deregisterInputInteractionHandler: (evtType, handler) => this.formElement.removeEventListener(evtType, handler)
+      };
+    }
+
+    getLabelAdapterMethods() {
+      return {
+        floatLabel: shouldFloat => this.labelElement && this.labelElement.floatingLabelFoundation.float(shouldFloat),
+        getLabelWidth: () => {
+          return this.labelElement ? this.labelElement.floatingLabelFoundation.getWidth() : 0;
+        },
+        hasLabel: () => Boolean(this.labelElement),
+        shakeLabel: shouldShake => this.labelElement && this.labelElement.floatingLabelFoundation.shake(shouldShake)
+      };
+    }
+
+    getLineRippleAdapterMethods() {
+      return {
+        activateLineRipple: () => {
+          if (this.lineRippleElement) {
+            this.lineRippleElement.lineRippleFoundation.activate();
+          }
+        },
+        deactivateLineRipple: () => {
+          if (this.lineRippleElement) {
+            this.lineRippleElement.lineRippleFoundation.deactivate();
+          }
+        },
+        setLineRippleTransformOrigin: normalizedX => {
+          if (this.lineRippleElement) {
+            this.lineRippleElement.lineRippleFoundation.setRippleCenter(normalizedX);
+          }
+        }
+      };
+    }
+
+    async _getUpdateComplete() {
+      await super._getUpdateComplete();
+      await this._outlineUpdateComplete;
+    }
+
+    async firstUpdated() {
+      const outlineElement = this.outlineElement;
+
+      if (outlineElement) {
+        this._outlineUpdateComplete = outlineElement.updateComplete;
+        await this._outlineUpdateComplete;
+      }
+
+      super.firstUpdated();
+
+      if (this.validateOnInitialRender) {
+        this.reportValidity();
+      }
+    }
+
+    getOutlineAdapterMethods() {
+      return {
+        closeOutline: () => this.outlineElement && (this.outlineOpen = false),
+        hasOutline: () => Boolean(this.outlineElement),
+        notchOutline: labelWidth => {
+          const outlineElement = this.outlineElement;
+
+          if (outlineElement && !this.outlineOpen) {
+            this.outlineWidth = labelWidth;
+            this.outlineOpen = true;
+          }
+        }
+      };
+    }
+
+    async onLabelChange() {
+      if (this.label) {
+        await this.layout();
+      }
+    }
+
+    async layout() {
+      await this.updateComplete;
+
+      if (this.labelElement && this.outlineElement) {
+        /* When the textfield automatically notches due to a value and label
+         * being defined, the textfield may be set to `display: none` by the user.
+         * this means that the notch is of size 0px. We provide this function so
+         * that the user may manually resize the notch to the floated label's
+         * width.
+         */
+        const labelWidth = this.labelElement.floatingLabelFoundation.getWidth();
+
+        if (this.outlineOpen) {
+          this.outlineWidth = labelWidth;
+        }
+      }
+    }
+
+  }
+
+  __decorate([query('.mdc-text-field')], TextFieldBase.prototype, "mdcRoot", void 0);
+
+  __decorate([query('input')], TextFieldBase.prototype, "formElement", void 0);
+
+  __decorate([query('.mdc-floating-label')], TextFieldBase.prototype, "labelElement", void 0);
+
+  __decorate([query('.mdc-line-ripple')], TextFieldBase.prototype, "lineRippleElement", void 0);
+
+  __decorate([query('mwc-notched-outline')], TextFieldBase.prototype, "outlineElement", void 0);
+
+  __decorate([query('.mdc-notched-outline__notch')], TextFieldBase.prototype, "notchElement", void 0);
+
+  __decorate([query('.mdc-text-field-character-counter')], TextFieldBase.prototype, "charCounterElement", void 0);
+
+  __decorate([property({
+    type: String
+  })], TextFieldBase.prototype, "value", void 0);
+
+  __decorate([property({
+    type: String
+  })], TextFieldBase.prototype, "type", void 0);
+
+  __decorate([property({
+    type: String
+  })], TextFieldBase.prototype, "placeholder", void 0);
+
+  __decorate([property({
+    type: String
+  })], TextFieldBase.prototype, "label", void 0);
+
+  __decorate([property({
+    type: String
+  })], TextFieldBase.prototype, "icon", void 0);
+
+  __decorate([property({
+    type: String
+  })], TextFieldBase.prototype, "iconTrailing", void 0);
+
+  __decorate([property({
+    type: Boolean,
+    reflect: true
+  })], TextFieldBase.prototype, "disabled", void 0);
+
+  __decorate([property({
+    type: Boolean
+  })], TextFieldBase.prototype, "required", void 0);
+
+  __decorate([property({
+    type: Number
+  })], TextFieldBase.prototype, "maxLength", void 0);
+
+  __decorate([property({
+    type: Boolean,
+    reflect: true
+  })], TextFieldBase.prototype, "outlined", void 0);
+
+  __decorate([property({
+    type: Boolean,
+    reflect: true
+  })], TextFieldBase.prototype, "fullWidth", void 0);
+
+  __decorate([property({
+    type: String
+  })], TextFieldBase.prototype, "helper", void 0);
+
+  __decorate([property({
+    type: Boolean
+  })], TextFieldBase.prototype, "validateOnInitialRender", void 0);
+
+  __decorate([property({
+    type: String
+  })], TextFieldBase.prototype, "validationMessage", void 0);
+
+  __decorate([property({
+    type: String
+  })], TextFieldBase.prototype, "pattern", void 0);
+
+  __decorate([property({
+    type: Number
+  })], TextFieldBase.prototype, "min", void 0);
+
+  __decorate([property({
+    type: Number
+  })], TextFieldBase.prototype, "max", void 0);
+
+  __decorate([property({
+    type: Number
+  })], TextFieldBase.prototype, "step", void 0);
+
+  __decorate([property({
+    type: Boolean
+  })], TextFieldBase.prototype, "helperPersistent", void 0);
+
+  __decorate([property({
+    type: Boolean
+  })], TextFieldBase.prototype, "charCounter", void 0);
+
+  __decorate([property({
+    type: Boolean
+  })], TextFieldBase.prototype, "outlineOpen", void 0);
+
+  __decorate([property({
+    type: Number
+  })], TextFieldBase.prototype, "outlineWidth", void 0);
+
+  __decorate([property({
+    type: Boolean
+  })], TextFieldBase.prototype, "isUiValid", void 0);
+
+  __decorate([eventOptions({
+    passive: true
+  })], TextFieldBase.prototype, "handleInputChange", null);
+
+  /**
+  @license
+  Copyright 2018 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  */
+  const style$4 = css`.mdc-floating-label{font-family:Roboto, sans-serif;-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased;font-size:1rem;line-height:1.75rem;font-weight:400;letter-spacing:.009375em;text-decoration:inherit;text-transform:inherit;position:absolute;left:0;transform-origin:left top;transition:transform 150ms cubic-bezier(0.4, 0, 0.2, 1),color 150ms cubic-bezier(0.4, 0, 0.2, 1);line-height:1.15rem;text-align:left;text-overflow:ellipsis;white-space:nowrap;cursor:text;overflow:hidden;will-change:transform}[dir=rtl] .mdc-floating-label,.mdc-floating-label[dir=rtl]{right:0;left:auto;transform-origin:right top;text-align:right}.mdc-floating-label--float-above{cursor:auto}.mdc-floating-label--float-above{transform:translateY(-106%) scale(0.75)}.mdc-floating-label--shake{animation:mdc-floating-label-shake-float-above-standard 250ms 1}@keyframes mdc-floating-label-shake-float-above-standard{0%{transform:translateX(calc(0 - 0%)) translateY(-106%) scale(0.75)}33%{animation-timing-function:cubic-bezier(0.5, 0, 0.701732, 0.495819);transform:translateX(calc(4% - 0%)) translateY(-106%) scale(0.75)}66%{animation-timing-function:cubic-bezier(0.302435, 0.381352, 0.55, 0.956352);transform:translateX(calc(-4% - 0%)) translateY(-106%) scale(0.75)}100%{transform:translateX(calc(0 - 0%)) translateY(-106%) scale(0.75)}}.mdc-line-ripple{position:absolute;bottom:0;left:0;width:100%;height:2px;transform:scaleX(0);transition:transform 180ms cubic-bezier(0.4, 0, 0.2, 1),opacity 180ms cubic-bezier(0.4, 0, 0.2, 1);opacity:0;z-index:2}.mdc-line-ripple--active{transform:scaleX(1);opacity:1}.mdc-line-ripple--deactivating{opacity:0}.mdc-notched-outline{display:flex;position:absolute;right:0;left:0;box-sizing:border-box;width:100%;max-width:100%;height:100%;text-align:left;pointer-events:none}[dir=rtl] .mdc-notched-outline,.mdc-notched-outline[dir=rtl]{text-align:right}.mdc-notched-outline__leading,.mdc-notched-outline__notch,.mdc-notched-outline__trailing{box-sizing:border-box;height:100%;border-top:1px solid;border-bottom:1px solid;pointer-events:none}.mdc-notched-outline__leading{border-left:1px solid;border-right:none;width:12px}[dir=rtl] .mdc-notched-outline__leading,.mdc-notched-outline__leading[dir=rtl]{border-left:none;border-right:1px solid}.mdc-notched-outline__trailing{border-left:none;border-right:1px solid;flex-grow:1}[dir=rtl] .mdc-notched-outline__trailing,.mdc-notched-outline__trailing[dir=rtl]{border-left:1px solid;border-right:none}.mdc-notched-outline__notch{flex:0 0 auto;width:auto;max-width:calc(100% - 12px * 2)}.mdc-notched-outline .mdc-floating-label{display:inline-block;position:relative;max-width:100%}.mdc-notched-outline .mdc-floating-label--float-above{text-overflow:clip}.mdc-notched-outline--upgraded .mdc-floating-label--float-above{max-width:calc(100% / .75)}.mdc-notched-outline--notched .mdc-notched-outline__notch{padding-left:0;padding-right:8px;border-top:none}[dir=rtl] .mdc-notched-outline--notched .mdc-notched-outline__notch,.mdc-notched-outline--notched .mdc-notched-outline__notch[dir=rtl]{padding-left:8px;padding-right:0}.mdc-notched-outline--no-label .mdc-notched-outline__notch{padding:0}@keyframes mdc-ripple-fg-radius-in{from{animation-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transform:translate(var(--mdc-ripple-fg-translate-start, 0)) scale(1)}to{transform:translate(var(--mdc-ripple-fg-translate-end, 0)) scale(var(--mdc-ripple-fg-scale, 1))}}@keyframes mdc-ripple-fg-opacity-in{from{animation-timing-function:linear;opacity:0}to{opacity:var(--mdc-ripple-fg-opacity, 0)}}@keyframes mdc-ripple-fg-opacity-out{from{animation-timing-function:linear;opacity:var(--mdc-ripple-fg-opacity, 0)}to{opacity:0}}.mdc-text-field-helper-text{font-family:Roboto, sans-serif;-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased;font-size:.75rem;line-height:1.25rem;font-weight:400;letter-spacing:.0333333333em;text-decoration:inherit;text-transform:inherit;display:block;margin-top:0;line-height:normal;margin:0;transition:opacity 150ms cubic-bezier(0.4, 0, 0.2, 1);opacity:0;will-change:opacity}.mdc-text-field-helper-text::before{display:inline-block;width:0;height:16px;content:"";vertical-align:0}.mdc-text-field-helper-text--persistent{transition:none;opacity:1;will-change:initial}.mdc-text-field-character-counter{font-family:Roboto, sans-serif;-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased;font-size:.75rem;line-height:1.25rem;font-weight:400;letter-spacing:.0333333333em;text-decoration:inherit;text-transform:inherit;display:block;margin-top:0;line-height:normal;margin-left:auto;margin-right:0;padding-left:16px;padding-right:0;white-space:nowrap}.mdc-text-field-character-counter::before{display:inline-block;width:0;height:16px;content:"";vertical-align:0}[dir=rtl] .mdc-text-field-character-counter,.mdc-text-field-character-counter[dir=rtl]{margin-left:0;margin-right:auto}[dir=rtl] .mdc-text-field-character-counter,.mdc-text-field-character-counter[dir=rtl]{padding-left:0;padding-right:16px}.mdc-text-field--with-leading-icon .mdc-text-field__icon,.mdc-text-field--with-trailing-icon .mdc-text-field__icon{position:absolute;top:50%;transform:translateY(-50%);cursor:pointer}.mdc-text-field__icon:not([tabindex]),.mdc-text-field__icon[tabindex="-1"]{cursor:default;pointer-events:none}.mdc-text-field{--mdc-ripple-fg-size: 0;--mdc-ripple-left: 0;--mdc-ripple-top: 0;--mdc-ripple-fg-scale: 1;--mdc-ripple-fg-translate-end: 0;--mdc-ripple-fg-translate-start: 0;-webkit-tap-highlight-color:rgba(0,0,0,0);height:56px;border-radius:4px 4px 0 0;display:inline-flex;position:relative;box-sizing:border-box;overflow:hidden;will-change:opacity,transform,color}.mdc-text-field::before,.mdc-text-field::after{position:absolute;border-radius:50%;opacity:0;pointer-events:none;content:""}.mdc-text-field::before{transition:opacity 15ms linear,background-color 15ms linear;z-index:1}.mdc-text-field.mdc-ripple-upgraded::before{transform:scale(var(--mdc-ripple-fg-scale, 1))}.mdc-text-field.mdc-ripple-upgraded::after{top:0;left:0;transform:scale(0);transform-origin:center center}.mdc-text-field.mdc-ripple-upgraded--unbounded::after{top:var(--mdc-ripple-top, 0);left:var(--mdc-ripple-left, 0)}.mdc-text-field.mdc-ripple-upgraded--foreground-activation::after{animation:mdc-ripple-fg-radius-in 225ms forwards,mdc-ripple-fg-opacity-in 75ms forwards}.mdc-text-field.mdc-ripple-upgraded--foreground-deactivation::after{animation:mdc-ripple-fg-opacity-out 150ms;transform:translate(var(--mdc-ripple-fg-translate-end, 0)) scale(var(--mdc-ripple-fg-scale, 1))}.mdc-text-field::before,.mdc-text-field::after{background-color:rgba(0,0,0,.87)}.mdc-text-field:hover::before{opacity:.04}.mdc-text-field.mdc-ripple-upgraded--background-focused::before,.mdc-text-field:not(.mdc-ripple-upgraded):focus::before{transition-duration:75ms;opacity:.12}.mdc-text-field::before,.mdc-text-field::after{top:calc(50% - 100%);left:calc(50% - 100%);width:200%;height:200%}.mdc-text-field.mdc-ripple-upgraded::after{width:var(--mdc-ripple-fg-size, 100%);height:var(--mdc-ripple-fg-size, 100%)}.mdc-text-field:not(.mdc-text-field--disabled) .mdc-floating-label{color:rgba(0,0,0,.6)}.mdc-text-field:not(.mdc-text-field--disabled) .mdc-text-field__input{color:rgba(0,0,0,.87)}.mdc-text-field .mdc-text-field__input{caret-color:#6200ee;caret-color:var(--mdc-theme-primary, #6200ee)}.mdc-text-field:not(.mdc-text-field--disabled) .mdc-text-field__input{border-bottom-color:rgba(0,0,0,.42)}.mdc-text-field:not(.mdc-text-field--disabled) .mdc-text-field__input:hover{border-bottom-color:rgba(0,0,0,.87)}.mdc-text-field .mdc-line-ripple{background-color:#6200ee;background-color:var(--mdc-theme-primary, #6200ee)}.mdc-text-field:not(.mdc-text-field--disabled)+.mdc-text-field-helper-line .mdc-text-field-helper-text{color:rgba(0,0,0,.6)}.mdc-text-field:not(.mdc-text-field--disabled) .mdc-text-field-character-counter,.mdc-text-field:not(.mdc-text-field--disabled)+.mdc-text-field-helper-line .mdc-text-field-character-counter{color:rgba(0,0,0,.6)}.mdc-text-field:not(.mdc-text-field--disabled) .mdc-text-field__icon{color:rgba(0,0,0,.54)}.mdc-text-field:not(.mdc-text-field--disabled){background-color:#f5f5f5}.mdc-text-field .mdc-floating-label{left:16px;right:initial;top:50%;transform:translateY(-50%);pointer-events:none}[dir=rtl] .mdc-text-field .mdc-floating-label,.mdc-text-field .mdc-floating-label[dir=rtl]{left:initial;right:16px}.mdc-text-field .mdc-floating-label--float-above{transform:translateY(-106%) scale(0.75)}.mdc-text-field--textarea .mdc-floating-label{left:4px;right:initial}[dir=rtl] .mdc-text-field--textarea .mdc-floating-label,.mdc-text-field--textarea .mdc-floating-label[dir=rtl]{left:initial;right:4px}.mdc-text-field--outlined .mdc-floating-label{left:4px;right:initial}[dir=rtl] .mdc-text-field--outlined .mdc-floating-label,.mdc-text-field--outlined .mdc-floating-label[dir=rtl]{left:initial;right:4px}.mdc-text-field--outlined--with-leading-icon .mdc-floating-label{left:36px;right:initial}[dir=rtl] .mdc-text-field--outlined--with-leading-icon .mdc-floating-label,.mdc-text-field--outlined--with-leading-icon .mdc-floating-label[dir=rtl]{left:initial;right:36px}.mdc-text-field--outlined--with-leading-icon .mdc-floating-label--float-above{left:40px;right:initial}[dir=rtl] .mdc-text-field--outlined--with-leading-icon .mdc-floating-label--float-above,.mdc-text-field--outlined--with-leading-icon .mdc-floating-label--float-above[dir=rtl]{left:initial;right:40px}.mdc-text-field__input{font-family:Roboto, sans-serif;-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased;font-size:1rem;font-weight:400;letter-spacing:.009375em;text-decoration:inherit;text-transform:inherit;align-self:flex-end;box-sizing:border-box;width:100%;height:100%;padding:20px 16px 6px;transition:opacity 150ms cubic-bezier(0.4, 0, 0.2, 1);border:none;border-bottom:1px solid;border-radius:0;background:none;appearance:none}.mdc-text-field__input::placeholder{transition:opacity 67ms cubic-bezier(0.4, 0, 0.2, 1);opacity:0;color:rgba(0,0,0,.54)}.mdc-text-field__input:-ms-input-placeholder{color:rgba(0,0,0,.54) !important}.mdc-text-field--fullwidth .mdc-text-field__input::placeholder,.mdc-text-field--no-label .mdc-text-field__input::placeholder,.mdc-text-field--focused .mdc-text-field__input::placeholder{transition-delay:40ms;transition-duration:110ms;opacity:1}.mdc-text-field__input:focus{outline:none}.mdc-text-field__input:invalid{box-shadow:none}.mdc-text-field__input:-webkit-autofill{z-index:auto !important}.mdc-text-field--no-label:not(.mdc-text-field--outlined):not(.mdc-text-field--textarea) .mdc-text-field__input{padding-top:16px;padding-bottom:16px}.mdc-text-field__input:-webkit-autofill+.mdc-floating-label{transform:translateY(-50%) scale(0.75);cursor:auto}.mdc-text-field--outlined{border:none;overflow:visible}.mdc-text-field--outlined:not(.mdc-text-field--disabled) .mdc-notched-outline__leading,.mdc-text-field--outlined:not(.mdc-text-field--disabled) .mdc-notched-outline__notch,.mdc-text-field--outlined:not(.mdc-text-field--disabled) .mdc-notched-outline__trailing{border-color:rgba(0,0,0,.38)}.mdc-text-field--outlined:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__input:hover~.mdc-notched-outline .mdc-notched-outline__leading,.mdc-text-field--outlined:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__input:hover~.mdc-notched-outline .mdc-notched-outline__notch,.mdc-text-field--outlined:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__input:hover~.mdc-notched-outline .mdc-notched-outline__trailing,.mdc-text-field--outlined:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__icon:hover~.mdc-notched-outline .mdc-notched-outline__leading,.mdc-text-field--outlined:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__icon:hover~.mdc-notched-outline .mdc-notched-outline__notch,.mdc-text-field--outlined:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__icon:hover~.mdc-notched-outline .mdc-notched-outline__trailing{border-color:rgba(0,0,0,.87)}.mdc-text-field--outlined:not(.mdc-text-field--disabled).mdc-text-field--focused .mdc-notched-outline__leading,.mdc-text-field--outlined:not(.mdc-text-field--disabled).mdc-text-field--focused .mdc-notched-outline__notch,.mdc-text-field--outlined:not(.mdc-text-field--disabled).mdc-text-field--focused .mdc-notched-outline__trailing{border-color:#6200ee;border-color:var(--mdc-theme-primary, #6200ee)}.mdc-text-field--outlined .mdc-floating-label--shake{animation:mdc-floating-label-shake-float-above-text-field-outlined 250ms 1}.mdc-text-field--outlined .mdc-notched-outline .mdc-notched-outline__leading{border-radius:4px 0 0 4px}[dir=rtl] .mdc-text-field--outlined .mdc-notched-outline .mdc-notched-outline__leading,.mdc-text-field--outlined .mdc-notched-outline .mdc-notched-outline__leading[dir=rtl]{border-radius:0 4px 4px 0}.mdc-text-field--outlined .mdc-notched-outline .mdc-notched-outline__trailing{border-radius:0 4px 4px 0}[dir=rtl] .mdc-text-field--outlined .mdc-notched-outline .mdc-notched-outline__trailing,.mdc-text-field--outlined .mdc-notched-outline .mdc-notched-outline__trailing[dir=rtl]{border-radius:4px 0 0 4px}.mdc-text-field--outlined .mdc-floating-label--float-above{transform:translateY(-37.25px) scale(1)}.mdc-text-field--outlined .mdc-floating-label--float-above{font-size:.75rem}.mdc-text-field--outlined.mdc-notched-outline--upgraded .mdc-floating-label--float-above,.mdc-text-field--outlined .mdc-notched-outline--upgraded .mdc-floating-label--float-above{transform:translateY(-34.75px) scale(0.75)}.mdc-text-field--outlined.mdc-notched-outline--upgraded .mdc-floating-label--float-above,.mdc-text-field--outlined .mdc-notched-outline--upgraded .mdc-floating-label--float-above{font-size:1rem}.mdc-text-field--outlined .mdc-notched-outline--notched .mdc-notched-outline__notch{padding-top:1px}.mdc-text-field--outlined::before,.mdc-text-field--outlined::after{content:none}.mdc-text-field--outlined:not(.mdc-text-field--disabled){background-color:transparent}.mdc-text-field--outlined .mdc-text-field__input{display:flex;padding:12px 16px 14px;border:none !important;background-color:transparent;z-index:1}.mdc-text-field--outlined .mdc-text-field__icon{z-index:2}.mdc-text-field--outlined.mdc-text-field--focused .mdc-notched-outline--notched .mdc-notched-outline__notch{padding-top:2px}.mdc-text-field--outlined.mdc-text-field--focused .mdc-notched-outline__leading,.mdc-text-field--outlined.mdc-text-field--focused .mdc-notched-outline__notch,.mdc-text-field--outlined.mdc-text-field--focused .mdc-notched-outline__trailing{border-width:2px}.mdc-text-field--outlined.mdc-text-field--disabled{background-color:transparent}.mdc-text-field--outlined.mdc-text-field--disabled .mdc-notched-outline__leading,.mdc-text-field--outlined.mdc-text-field--disabled .mdc-notched-outline__notch,.mdc-text-field--outlined.mdc-text-field--disabled .mdc-notched-outline__trailing{border-color:rgba(0,0,0,.06)}.mdc-text-field--outlined.mdc-text-field--disabled .mdc-text-field__input{border-bottom:none}.mdc-text-field--outlined.mdc-text-field--dense{height:48px}.mdc-text-field--outlined.mdc-text-field--dense .mdc-floating-label--float-above{transform:translateY(-134%) scale(1)}.mdc-text-field--outlined.mdc-text-field--dense .mdc-floating-label--float-above{font-size:.8rem}.mdc-text-field--outlined.mdc-text-field--dense.mdc-notched-outline--upgraded .mdc-floating-label--float-above,.mdc-text-field--outlined.mdc-text-field--dense .mdc-notched-outline--upgraded .mdc-floating-label--float-above{transform:translateY(-120%) scale(0.8)}.mdc-text-field--outlined.mdc-text-field--dense.mdc-notched-outline--upgraded .mdc-floating-label--float-above,.mdc-text-field--outlined.mdc-text-field--dense .mdc-notched-outline--upgraded .mdc-floating-label--float-above{font-size:1rem}.mdc-text-field--outlined.mdc-text-field--dense .mdc-floating-label--shake{animation:mdc-floating-label-shake-float-above-text-field-outlined-dense 250ms 1}.mdc-text-field--outlined.mdc-text-field--dense .mdc-text-field__input{padding:12px 12px 7px}.mdc-text-field--outlined.mdc-text-field--dense .mdc-floating-label{top:14px}.mdc-text-field--outlined.mdc-text-field--dense .mdc-text-field__icon{top:12px}.mdc-text-field--with-leading-icon .mdc-text-field__icon{left:16px;right:initial}[dir=rtl] .mdc-text-field--with-leading-icon .mdc-text-field__icon,.mdc-text-field--with-leading-icon .mdc-text-field__icon[dir=rtl]{left:initial;right:16px}.mdc-text-field--with-leading-icon .mdc-text-field__input{padding-left:48px;padding-right:16px}[dir=rtl] .mdc-text-field--with-leading-icon .mdc-text-field__input,.mdc-text-field--with-leading-icon .mdc-text-field__input[dir=rtl]{padding-left:16px;padding-right:48px}.mdc-text-field--with-leading-icon .mdc-floating-label{left:48px;right:initial}[dir=rtl] .mdc-text-field--with-leading-icon .mdc-floating-label,.mdc-text-field--with-leading-icon .mdc-floating-label[dir=rtl]{left:initial;right:48px}.mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-text-field__icon{left:16px;right:initial}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-text-field__icon,.mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-text-field__icon[dir=rtl]{left:initial;right:16px}.mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-text-field__input{padding-left:48px;padding-right:16px}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-text-field__input,.mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-text-field__input[dir=rtl]{padding-left:16px;padding-right:48px}.mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-floating-label--float-above{transform:translateY(-37.25px) translateX(-32px) scale(1)}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-floating-label--float-above,.mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-floating-label--float-above[dir=rtl]{transform:translateY(-37.25px) translateX(32px) scale(1)}.mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-floating-label--float-above{font-size:.75rem}.mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-notched-outline--upgraded .mdc-floating-label--float-above,.mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-notched-outline--upgraded .mdc-floating-label--float-above{transform:translateY(-34.75px) translateX(-32px) scale(0.75)}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-notched-outline--upgraded .mdc-floating-label--float-above,.mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-notched-outline--upgraded .mdc-floating-label--float-above[dir=rtl],[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-notched-outline--upgraded .mdc-floating-label--float-above,.mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-notched-outline--upgraded .mdc-floating-label--float-above[dir=rtl]{transform:translateY(-34.75px) translateX(32px) scale(0.75)}.mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-notched-outline--upgraded .mdc-floating-label--float-above,.mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-notched-outline--upgraded .mdc-floating-label--float-above{font-size:1rem}.mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-floating-label--shake{animation:mdc-floating-label-shake-float-above-text-field-outlined-leading-icon 250ms 1}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-floating-label--shake,.mdc-text-field--with-leading-icon.mdc-text-field--outlined[dir=rtl] .mdc-floating-label--shake{animation:mdc-floating-label-shake-float-above-text-field-outlined-leading-icon-rtl 250ms 1}.mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-floating-label{left:36px;right:initial}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-floating-label,.mdc-text-field--with-leading-icon.mdc-text-field--outlined .mdc-floating-label[dir=rtl]{left:initial;right:36px}.mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-text-field--dense .mdc-floating-label--float-above{transform:translateY(-134%) translateX(-21px) scale(1)}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-text-field--dense .mdc-floating-label--float-above,.mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-text-field--dense .mdc-floating-label--float-above[dir=rtl]{transform:translateY(-134%) translateX(21px) scale(1)}.mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-text-field--dense .mdc-floating-label--float-above{font-size:.8rem}.mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-text-field--dense.mdc-notched-outline--upgraded .mdc-floating-label--float-above,.mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-text-field--dense .mdc-notched-outline--upgraded .mdc-floating-label--float-above{transform:translateY(-120%) translateX(-21px) scale(0.8)}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-text-field--dense.mdc-notched-outline--upgraded .mdc-floating-label--float-above,.mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-text-field--dense.mdc-notched-outline--upgraded .mdc-floating-label--float-above[dir=rtl],[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-text-field--dense .mdc-notched-outline--upgraded .mdc-floating-label--float-above,.mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-text-field--dense .mdc-notched-outline--upgraded .mdc-floating-label--float-above[dir=rtl]{transform:translateY(-120%) translateX(21px) scale(0.8)}.mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-text-field--dense.mdc-notched-outline--upgraded .mdc-floating-label--float-above,.mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-text-field--dense .mdc-notched-outline--upgraded .mdc-floating-label--float-above{font-size:1rem}.mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-text-field--dense .mdc-floating-label--shake{animation:mdc-floating-label-shake-float-above-text-field-outlined-leading-icon-dense 250ms 1}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-text-field--dense .mdc-floating-label--shake,.mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-text-field--dense[dir=rtl] .mdc-floating-label--shake{animation:mdc-floating-label-shake-float-above-text-field-outlined-leading-icon-dense-rtl 250ms 1}.mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-text-field--dense .mdc-floating-label{left:32px;right:initial}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-text-field--dense .mdc-floating-label,.mdc-text-field--with-leading-icon.mdc-text-field--outlined.mdc-text-field--dense .mdc-floating-label[dir=rtl]{left:initial;right:32px}.mdc-text-field--with-trailing-icon .mdc-text-field__icon{left:initial;right:12px}[dir=rtl] .mdc-text-field--with-trailing-icon .mdc-text-field__icon,.mdc-text-field--with-trailing-icon .mdc-text-field__icon[dir=rtl]{left:12px;right:initial}.mdc-text-field--with-trailing-icon .mdc-text-field__input{padding-left:16px;padding-right:48px}[dir=rtl] .mdc-text-field--with-trailing-icon .mdc-text-field__input,.mdc-text-field--with-trailing-icon .mdc-text-field__input[dir=rtl]{padding-left:48px;padding-right:16px}.mdc-text-field--with-trailing-icon.mdc-text-field--outlined .mdc-text-field__icon{left:initial;right:16px}[dir=rtl] .mdc-text-field--with-trailing-icon.mdc-text-field--outlined .mdc-text-field__icon,.mdc-text-field--with-trailing-icon.mdc-text-field--outlined .mdc-text-field__icon[dir=rtl]{left:16px;right:initial}.mdc-text-field--with-trailing-icon.mdc-text-field--outlined .mdc-text-field__input{padding-left:16px;padding-right:48px}[dir=rtl] .mdc-text-field--with-trailing-icon.mdc-text-field--outlined .mdc-text-field__input,.mdc-text-field--with-trailing-icon.mdc-text-field--outlined .mdc-text-field__input[dir=rtl]{padding-left:48px;padding-right:16px}.mdc-text-field--with-leading-icon.mdc-text-field--with-trailing-icon .mdc-text-field__icon{left:16px;right:auto}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--with-trailing-icon .mdc-text-field__icon,.mdc-text-field--with-leading-icon.mdc-text-field--with-trailing-icon .mdc-text-field__icon[dir=rtl]{left:auto;right:16px}.mdc-text-field--with-leading-icon.mdc-text-field--with-trailing-icon .mdc-text-field__icon~.mdc-text-field__icon{right:12px;left:auto}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--with-trailing-icon .mdc-text-field__icon~.mdc-text-field__icon,.mdc-text-field--with-leading-icon.mdc-text-field--with-trailing-icon .mdc-text-field__icon~.mdc-text-field__icon[dir=rtl]{right:auto;left:12px}.mdc-text-field--with-leading-icon.mdc-text-field--with-trailing-icon .mdc-text-field__input{padding-left:48px;padding-right:48px}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--with-trailing-icon .mdc-text-field__input,.mdc-text-field--with-leading-icon.mdc-text-field--with-trailing-icon .mdc-text-field__input[dir=rtl]{padding-left:48px;padding-right:48px}.mdc-text-field--with-leading-icon.mdc-text-field--dense .mdc-text-field__icon,.mdc-text-field--with-trailing-icon.mdc-text-field--dense .mdc-text-field__icon{bottom:16px;transform:scale(0.8)}.mdc-text-field--with-leading-icon.mdc-text-field--dense .mdc-text-field__icon{left:12px;right:initial}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--dense .mdc-text-field__icon,.mdc-text-field--with-leading-icon.mdc-text-field--dense .mdc-text-field__icon[dir=rtl]{left:initial;right:12px}.mdc-text-field--with-leading-icon.mdc-text-field--dense .mdc-text-field__input{padding-left:44px;padding-right:16px}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--dense .mdc-text-field__input,.mdc-text-field--with-leading-icon.mdc-text-field--dense .mdc-text-field__input[dir=rtl]{padding-left:16px;padding-right:44px}.mdc-text-field--with-leading-icon.mdc-text-field--dense .mdc-floating-label{left:44px;right:initial}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--dense .mdc-floating-label,.mdc-text-field--with-leading-icon.mdc-text-field--dense .mdc-floating-label[dir=rtl]{left:initial;right:44px}.mdc-text-field--with-trailing-icon.mdc-text-field--dense .mdc-text-field__icon{left:initial;right:12px}[dir=rtl] .mdc-text-field--with-trailing-icon.mdc-text-field--dense .mdc-text-field__icon,.mdc-text-field--with-trailing-icon.mdc-text-field--dense .mdc-text-field__icon[dir=rtl]{left:12px;right:initial}.mdc-text-field--with-trailing-icon.mdc-text-field--dense .mdc-text-field__input{padding-left:16px;padding-right:44px}[dir=rtl] .mdc-text-field--with-trailing-icon.mdc-text-field--dense .mdc-text-field__input,.mdc-text-field--with-trailing-icon.mdc-text-field--dense .mdc-text-field__input[dir=rtl]{padding-left:44px;padding-right:16px}.mdc-text-field--with-leading-icon.mdc-text-field--with-trailing-icon.mdc-text-field--dense .mdc-text-field__icon{left:12px;right:auto}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--with-trailing-icon.mdc-text-field--dense .mdc-text-field__icon,.mdc-text-field--with-leading-icon.mdc-text-field--with-trailing-icon.mdc-text-field--dense .mdc-text-field__icon[dir=rtl]{left:auto;right:12px}.mdc-text-field--with-leading-icon.mdc-text-field--with-trailing-icon.mdc-text-field--dense .mdc-text-field__icon~.mdc-text-field__icon{right:12px;left:auto}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--with-trailing-icon.mdc-text-field--dense .mdc-text-field__icon~.mdc-text-field__icon,.mdc-text-field--with-leading-icon.mdc-text-field--with-trailing-icon.mdc-text-field--dense .mdc-text-field__icon~.mdc-text-field__icon[dir=rtl]{right:auto;left:12px}.mdc-text-field--with-leading-icon.mdc-text-field--with-trailing-icon.mdc-text-field--dense .mdc-text-field__input{padding-left:44px;padding-right:44px}[dir=rtl] .mdc-text-field--with-leading-icon.mdc-text-field--with-trailing-icon.mdc-text-field--dense .mdc-text-field__input,.mdc-text-field--with-leading-icon.mdc-text-field--with-trailing-icon.mdc-text-field--dense .mdc-text-field__input[dir=rtl]{padding-left:44px;padding-right:44px}.mdc-text-field--dense .mdc-floating-label--float-above{transform:translateY(-70%) scale(0.8)}.mdc-text-field--dense .mdc-floating-label--shake{animation:mdc-floating-label-shake-float-above-text-field-dense 250ms 1}.mdc-text-field--dense .mdc-text-field__input{padding:12px 12px 0}.mdc-text-field--dense .mdc-floating-label{font-size:.813rem}.mdc-text-field--dense .mdc-floating-label--float-above{font-size:.813rem}.mdc-text-field__input:required~.mdc-floating-label::after,.mdc-text-field__input:required~.mdc-notched-outline .mdc-floating-label::after{margin-left:1px;content:"*"}.mdc-text-field--textarea{display:inline-flex;width:auto;height:auto;transition:none;overflow:visible}.mdc-text-field--textarea:not(.mdc-text-field--disabled) .mdc-notched-outline__leading,.mdc-text-field--textarea:not(.mdc-text-field--disabled) .mdc-notched-outline__notch,.mdc-text-field--textarea:not(.mdc-text-field--disabled) .mdc-notched-outline__trailing{border-color:rgba(0,0,0,.38)}.mdc-text-field--textarea:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__input:hover~.mdc-notched-outline .mdc-notched-outline__leading,.mdc-text-field--textarea:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__input:hover~.mdc-notched-outline .mdc-notched-outline__notch,.mdc-text-field--textarea:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__input:hover~.mdc-notched-outline .mdc-notched-outline__trailing,.mdc-text-field--textarea:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__icon:hover~.mdc-notched-outline .mdc-notched-outline__leading,.mdc-text-field--textarea:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__icon:hover~.mdc-notched-outline .mdc-notched-outline__notch,.mdc-text-field--textarea:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__icon:hover~.mdc-notched-outline .mdc-notched-outline__trailing{border-color:rgba(0,0,0,.87)}.mdc-text-field--textarea:not(.mdc-text-field--disabled).mdc-text-field--focused .mdc-notched-outline__leading,.mdc-text-field--textarea:not(.mdc-text-field--disabled).mdc-text-field--focused .mdc-notched-outline__notch,.mdc-text-field--textarea:not(.mdc-text-field--disabled).mdc-text-field--focused .mdc-notched-outline__trailing{border-color:#6200ee;border-color:var(--mdc-theme-primary, #6200ee)}.mdc-text-field--textarea .mdc-floating-label--shake{animation:mdc-floating-label-shake-float-above-textarea 250ms 1}.mdc-text-field--textarea .mdc-notched-outline .mdc-notched-outline__leading{border-radius:4px 0 0 4px}[dir=rtl] .mdc-text-field--textarea .mdc-notched-outline .mdc-notched-outline__leading,.mdc-text-field--textarea .mdc-notched-outline .mdc-notched-outline__leading[dir=rtl]{border-radius:0 4px 4px 0}.mdc-text-field--textarea .mdc-notched-outline .mdc-notched-outline__trailing{border-radius:0 4px 4px 0}[dir=rtl] .mdc-text-field--textarea .mdc-notched-outline .mdc-notched-outline__trailing,.mdc-text-field--textarea .mdc-notched-outline .mdc-notched-outline__trailing[dir=rtl]{border-radius:4px 0 0 4px}.mdc-text-field--textarea::before,.mdc-text-field--textarea::after{content:none}.mdc-text-field--textarea:not(.mdc-text-field--disabled){background-color:transparent}.mdc-text-field--textarea .mdc-floating-label--float-above{transform:translateY(-144%) scale(1)}.mdc-text-field--textarea .mdc-floating-label--float-above{font-size:.75rem}.mdc-text-field--textarea.mdc-notched-outline--upgraded .mdc-floating-label--float-above,.mdc-text-field--textarea .mdc-notched-outline--upgraded .mdc-floating-label--float-above{transform:translateY(-130%) scale(0.75)}.mdc-text-field--textarea.mdc-notched-outline--upgraded .mdc-floating-label--float-above,.mdc-text-field--textarea .mdc-notched-outline--upgraded .mdc-floating-label--float-above{font-size:1rem}.mdc-text-field--textarea .mdc-text-field-character-counter{left:initial;right:16px;position:absolute;bottom:13px}[dir=rtl] .mdc-text-field--textarea .mdc-text-field-character-counter,.mdc-text-field--textarea .mdc-text-field-character-counter[dir=rtl]{left:16px;right:initial}.mdc-text-field--textarea .mdc-text-field__input{align-self:auto;box-sizing:border-box;height:auto;margin:8px 1px 1px 0;padding:0 16px 16px;border:none;line-height:1.75rem}.mdc-text-field--textarea .mdc-text-field-character-counter+.mdc-text-field__input{margin-bottom:28px;padding-bottom:0}.mdc-text-field--textarea .mdc-floating-label{top:17px;width:auto;pointer-events:none}.mdc-text-field--textarea .mdc-floating-label:not(.mdc-floating-label--float-above){transform:none}.mdc-text-field--textarea.mdc-text-field--focused .mdc-notched-outline__leading,.mdc-text-field--textarea.mdc-text-field--focused .mdc-notched-outline__notch,.mdc-text-field--textarea.mdc-text-field--focused .mdc-notched-outline__trailing{border-width:2px}.mdc-text-field--fullwidth{width:100%}.mdc-text-field--fullwidth:not(.mdc-text-field--disabled) .mdc-text-field__input{border-bottom-color:rgba(0,0,0,.42)}.mdc-text-field--fullwidth.mdc-text-field--disabled .mdc-text-field__input{border-bottom-color:rgba(0,0,0,.42)}.mdc-text-field--fullwidth:not(.mdc-text-field--textarea){display:block}.mdc-text-field--fullwidth:not(.mdc-text-field--textarea)::before,.mdc-text-field--fullwidth:not(.mdc-text-field--textarea)::after{content:none}.mdc-text-field--fullwidth:not(.mdc-text-field--textarea):not(.mdc-text-field--disabled){background-color:transparent}.mdc-text-field--fullwidth:not(.mdc-text-field--textarea) .mdc-text-field__input{padding:0}.mdc-text-field--fullwidth.mdc-text-field--textarea .mdc-text-field__input{resize:vertical}.mdc-text-field--fullwidth.mdc-text-field--invalid:not(.mdc-text-field--disabled) .mdc-text-field__input{border-bottom-color:#b00020;border-bottom-color:var(--mdc-theme-error, #b00020)}.mdc-text-field-helper-line{display:flex;justify-content:space-between;box-sizing:border-box}.mdc-text-field--dense+.mdc-text-field-helper-line{margin-bottom:4px}.mdc-text-field+.mdc-text-field-helper-line{padding-right:16px;padding-left:16px}.mdc-form-field>.mdc-text-field+label{align-self:flex-start}.mdc-text-field--focused:not(.mdc-text-field--disabled) .mdc-floating-label{color:rgba(98,0,238,.87)}.mdc-text-field--focused+.mdc-text-field-helper-line .mdc-text-field-helper-text:not(.mdc-text-field-helper-text--validation-msg){opacity:1}.mdc-text-field--invalid:not(.mdc-text-field--disabled) .mdc-text-field__input{border-bottom-color:#b00020;border-bottom-color:var(--mdc-theme-error, #b00020)}.mdc-text-field--invalid:not(.mdc-text-field--disabled) .mdc-text-field__input:hover{border-bottom-color:#b00020;border-bottom-color:var(--mdc-theme-error, #b00020)}.mdc-text-field--invalid:not(.mdc-text-field--disabled) .mdc-line-ripple{background-color:#b00020;background-color:var(--mdc-theme-error, #b00020)}.mdc-text-field--invalid:not(.mdc-text-field--disabled) .mdc-floating-label{color:#b00020;color:var(--mdc-theme-error, #b00020)}.mdc-text-field--invalid:not(.mdc-text-field--disabled).mdc-text-field--invalid+.mdc-text-field-helper-line .mdc-text-field-helper-text--validation-msg{color:#b00020;color:var(--mdc-theme-error, #b00020)}.mdc-text-field--invalid .mdc-text-field__input{caret-color:#b00020;caret-color:var(--mdc-theme-error, #b00020)}.mdc-text-field--invalid.mdc-text-field--with-trailing-icon:not(.mdc-text-field--with-leading-icon):not(.mdc-text-field--disabled) .mdc-text-field__icon{color:#b00020;color:var(--mdc-theme-error, #b00020)}.mdc-text-field--invalid.mdc-text-field--with-trailing-icon.mdc-text-field--with-leading-icon:not(.mdc-text-field--disabled) .mdc-text-field__icon~.mdc-text-field__icon{color:#b00020;color:var(--mdc-theme-error, #b00020)}.mdc-text-field--invalid+.mdc-text-field-helper-line .mdc-text-field-helper-text--validation-msg{opacity:1}.mdc-text-field--textarea.mdc-text-field--invalid:not(.mdc-text-field--disabled) .mdc-notched-outline__leading,.mdc-text-field--textarea.mdc-text-field--invalid:not(.mdc-text-field--disabled) .mdc-notched-outline__notch,.mdc-text-field--textarea.mdc-text-field--invalid:not(.mdc-text-field--disabled) .mdc-notched-outline__trailing{border-color:#b00020;border-color:var(--mdc-theme-error, #b00020)}.mdc-text-field--textarea.mdc-text-field--invalid:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__input:hover~.mdc-notched-outline .mdc-notched-outline__leading,.mdc-text-field--textarea.mdc-text-field--invalid:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__input:hover~.mdc-notched-outline .mdc-notched-outline__notch,.mdc-text-field--textarea.mdc-text-field--invalid:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__input:hover~.mdc-notched-outline .mdc-notched-outline__trailing,.mdc-text-field--textarea.mdc-text-field--invalid:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__icon:hover~.mdc-notched-outline .mdc-notched-outline__leading,.mdc-text-field--textarea.mdc-text-field--invalid:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__icon:hover~.mdc-notched-outline .mdc-notched-outline__notch,.mdc-text-field--textarea.mdc-text-field--invalid:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__icon:hover~.mdc-notched-outline .mdc-notched-outline__trailing{border-color:#b00020;border-color:var(--mdc-theme-error, #b00020)}.mdc-text-field--textarea.mdc-text-field--invalid:not(.mdc-text-field--disabled).mdc-text-field--focused .mdc-notched-outline__leading,.mdc-text-field--textarea.mdc-text-field--invalid:not(.mdc-text-field--disabled).mdc-text-field--focused .mdc-notched-outline__notch,.mdc-text-field--textarea.mdc-text-field--invalid:not(.mdc-text-field--disabled).mdc-text-field--focused .mdc-notched-outline__trailing{border-color:#b00020;border-color:var(--mdc-theme-error, #b00020)}.mdc-text-field--outlined.mdc-text-field--invalid:not(.mdc-text-field--disabled) .mdc-notched-outline__leading,.mdc-text-field--outlined.mdc-text-field--invalid:not(.mdc-text-field--disabled) .mdc-notched-outline__notch,.mdc-text-field--outlined.mdc-text-field--invalid:not(.mdc-text-field--disabled) .mdc-notched-outline__trailing{border-color:#b00020;border-color:var(--mdc-theme-error, #b00020)}.mdc-text-field--outlined.mdc-text-field--invalid:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__input:hover~.mdc-notched-outline .mdc-notched-outline__leading,.mdc-text-field--outlined.mdc-text-field--invalid:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__input:hover~.mdc-notched-outline .mdc-notched-outline__notch,.mdc-text-field--outlined.mdc-text-field--invalid:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__input:hover~.mdc-notched-outline .mdc-notched-outline__trailing,.mdc-text-field--outlined.mdc-text-field--invalid:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__icon:hover~.mdc-notched-outline .mdc-notched-outline__leading,.mdc-text-field--outlined.mdc-text-field--invalid:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__icon:hover~.mdc-notched-outline .mdc-notched-outline__notch,.mdc-text-field--outlined.mdc-text-field--invalid:not(.mdc-text-field--disabled):not(.mdc-text-field--focused) .mdc-text-field__icon:hover~.mdc-notched-outline .mdc-notched-outline__trailing{border-color:#b00020;border-color:var(--mdc-theme-error, #b00020)}.mdc-text-field--outlined.mdc-text-field--invalid:not(.mdc-text-field--disabled).mdc-text-field--focused .mdc-notched-outline__leading,.mdc-text-field--outlined.mdc-text-field--invalid:not(.mdc-text-field--disabled).mdc-text-field--focused .mdc-notched-outline__notch,.mdc-text-field--outlined.mdc-text-field--invalid:not(.mdc-text-field--disabled).mdc-text-field--focused .mdc-notched-outline__trailing{border-color:#b00020;border-color:var(--mdc-theme-error, #b00020)}.mdc-text-field--disabled{background-color:#fafafa;border-bottom:none;pointer-events:none}.mdc-text-field--disabled .mdc-text-field__input{border-bottom-color:rgba(0,0,0,.06)}.mdc-text-field--disabled .mdc-text-field__input{color:rgba(0,0,0,.37)}.mdc-text-field--disabled .mdc-floating-label{color:rgba(0,0,0,.37)}.mdc-text-field--disabled+.mdc-text-field-helper-line .mdc-text-field-helper-text{color:rgba(0,0,0,.37)}.mdc-text-field--disabled .mdc-text-field-character-counter,.mdc-text-field--disabled+.mdc-text-field-helper-line .mdc-text-field-character-counter{color:rgba(0,0,0,.37)}.mdc-text-field--disabled .mdc-text-field__icon{color:rgba(0,0,0,.3)}.mdc-text-field--disabled .mdc-floating-label{cursor:default}.mdc-text-field--textarea.mdc-text-field--disabled{background-color:transparent;background-color:#f9f9f9}.mdc-text-field--textarea.mdc-text-field--disabled .mdc-notched-outline__leading,.mdc-text-field--textarea.mdc-text-field--disabled .mdc-notched-outline__notch,.mdc-text-field--textarea.mdc-text-field--disabled .mdc-notched-outline__trailing{border-color:rgba(0,0,0,.06)}.mdc-text-field--textarea.mdc-text-field--disabled .mdc-text-field__input{border-bottom:none}@keyframes mdc-floating-label-shake-float-above-text-field-dense{0%{transform:translateX(calc(0 - 0%)) translateY(-70%) scale(0.8)}33%{animation-timing-function:cubic-bezier(0.5, 0, 0.701732, 0.495819);transform:translateX(calc(4% - 0%)) translateY(-70%) scale(0.8)}66%{animation-timing-function:cubic-bezier(0.302435, 0.381352, 0.55, 0.956352);transform:translateX(calc(-4% - 0%)) translateY(-70%) scale(0.8)}100%{transform:translateX(calc(0 - 0%)) translateY(-70%) scale(0.8)}}@keyframes mdc-floating-label-shake-float-above-text-field-outlined{0%{transform:translateX(calc(0 - 0%)) translateY(-34.75px) scale(0.75)}33%{animation-timing-function:cubic-bezier(0.5, 0, 0.701732, 0.495819);transform:translateX(calc(4% - 0%)) translateY(-34.75px) scale(0.75)}66%{animation-timing-function:cubic-bezier(0.302435, 0.381352, 0.55, 0.956352);transform:translateX(calc(-4% - 0%)) translateY(-34.75px) scale(0.75)}100%{transform:translateX(calc(0 - 0%)) translateY(-34.75px) scale(0.75)}}@keyframes mdc-floating-label-shake-float-above-text-field-outlined-dense{0%{transform:translateX(calc(0 - 0%)) translateY(-120%) scale(0.8)}33%{animation-timing-function:cubic-bezier(0.5, 0, 0.701732, 0.495819);transform:translateX(calc(4% - 0%)) translateY(-120%) scale(0.8)}66%{animation-timing-function:cubic-bezier(0.302435, 0.381352, 0.55, 0.956352);transform:translateX(calc(-4% - 0%)) translateY(-120%) scale(0.8)}100%{transform:translateX(calc(0 - 0%)) translateY(-120%) scale(0.8)}}@keyframes mdc-floating-label-shake-float-above-text-field-outlined-leading-icon{0%{transform:translateX(calc(0 - 0)) translateY(-34.75px) scale(0.75)}33%{animation-timing-function:cubic-bezier(0.5, 0, 0.701732, 0.495819);transform:translateX(calc(4% - 0)) translateY(-34.75px) scale(0.75)}66%{animation-timing-function:cubic-bezier(0.302435, 0.381352, 0.55, 0.956352);transform:translateX(calc(-4% - 0)) translateY(-34.75px) scale(0.75)}100%{transform:translateX(calc(0 - 0)) translateY(-34.75px) scale(0.75)}}@keyframes mdc-floating-label-shake-float-above-text-field-outlined-leading-icon-dense{0%{transform:translateX(calc(0 - 21px)) translateY(-120%) scale(0.8)}33%{animation-timing-function:cubic-bezier(0.5, 0, 0.701732, 0.495819);transform:translateX(calc(4% - 21px)) translateY(-120%) scale(0.8)}66%{animation-timing-function:cubic-bezier(0.302435, 0.381352, 0.55, 0.956352);transform:translateX(calc(-4% - 21px)) translateY(-120%) scale(0.8)}100%{transform:translateX(calc(0 - 21px)) translateY(-120%) scale(0.8)}}@keyframes mdc-floating-label-shake-float-above-text-field-outlined-leading-icon-rtl{0%{transform:translateX(calc(0 - 0)) translateY(-34.75px) scale(0.75)}33%{animation-timing-function:cubic-bezier(0.5, 0, 0.701732, 0.495819);transform:translateX(calc(4% - 0)) translateY(-34.75px) scale(0.75)}66%{animation-timing-function:cubic-bezier(0.302435, 0.381352, 0.55, 0.956352);transform:translateX(calc(-4% - 0)) translateY(-34.75px) scale(0.75)}100%{transform:translateX(calc(0 - 0)) translateY(-34.75px) scale(0.75)}}@keyframes mdc-floating-label-shake-float-above-text-field-outlined-leading-icon-dense-rtl{0%{transform:translateX(calc(0 - -21px)) translateY(-120%) scale(0.8)}33%{animation-timing-function:cubic-bezier(0.5, 0, 0.701732, 0.495819);transform:translateX(calc(4% - -21px)) translateY(-120%) scale(0.8)}66%{animation-timing-function:cubic-bezier(0.302435, 0.381352, 0.55, 0.956352);transform:translateX(calc(-4% - -21px)) translateY(-120%) scale(0.8)}100%{transform:translateX(calc(0 - -21px)) translateY(-120%) scale(0.8)}}@keyframes mdc-floating-label-shake-float-above-textarea{0%{transform:translateX(calc(0 - 0%)) translateY(-130%) scale(0.75)}33%{animation-timing-function:cubic-bezier(0.5, 0, 0.701732, 0.495819);transform:translateX(calc(4% - 0%)) translateY(-130%) scale(0.75)}66%{animation-timing-function:cubic-bezier(0.302435, 0.381352, 0.55, 0.956352);transform:translateX(calc(-4% - 0%)) translateY(-130%) scale(0.75)}100%{transform:translateX(calc(0 - 0%)) translateY(-130%) scale(0.75)}}.material-icons{font-family:var(--mdc-icon-font, "Material Icons");font-weight:normal;font-style:normal;font-size:var(--mdc-icon-size, 24px);line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale;font-feature-settings:"liga"}.hidden,.hidden::before,.hidden::after{display:none}:host{display:inline-block;outline:none}:host([fullwidth]){display:block}.mdc-text-field{display:flex;width:100%;border-radius:4px 4px 0 0;border-radius:var(--mdc-text-field-filled-border-radius, 4px 4px 0 0)}mwc-notched-outline{--mdc-notched-outline-border-color: var(--mdc-text-field-outlined-idle-border-color, rgba(0, 0, 0, 0.38))}:host(:not([disabled]):hover) :not(.mdc-text-field--invalid):not(.mdc-text-field--focused) mwc-notched-outline{--mdc-notched-outline-border-color: var(--mdc-text-field-outlined-hover-border-color, rgba(0, 0, 0, 0.87))}:host(:not([disabled])) .mdc-text-field:not(.mdc-text-field--outlined){background-color:var(--mdc-text-field-fill-color, whitesmoke)}:host(:not([disabled])) .mdc-text-field.mdc-text-field--invalid mwc-notched-outline{--mdc-notched-outline-border-color: var(--mdc-text-field-error-color, var(--mdc-theme-error, #b00020))}:host(:not([disabled])) .mdc-text-field.mdc-text-field--invalid+.mdc-text-field-helper-line .mdc-text-field-character-counter,:host(:not([disabled])) .mdc-text-field.mdc-text-field--invalid .mdc-text-field__icon{color:var(--mdc-text-field-error-color, var(--mdc-theme-error, #b00020))}:host(:not([disabled])) .mdc-text-field:not(.mdc-text-field--invalid):not(.mdc-text-field--focused) .mdc-floating-label,:host(:not([disabled])) .mdc-text-field:not(.mdc-text-field--invalid):not(.mdc-text-field--focused) .mdc-floating-label::after{color:var(--mdc-text-field-label-ink-color, rgba(0, 0, 0, 0.6))}:host(:not([disabled])) .mdc-text-field.mdc-text-field--focused mwc-notched-outline{--mdc-notched-outline-stroke-width: 2px}:host(:not([disabled])) .mdc-text-field.mdc-text-field--focused:not(.mdc-text-field--invalid) mwc-notched-outline{--mdc-notched-outline-border-color: var(--mdc-text-field-focused-label-color, var(--mdc-theme-primary, rgba(98, 0, 238, 0.87)))}:host(:not([disabled])) .mdc-text-field.mdc-text-field--focused:not(.mdc-text-field--invalid) .mdc-floating-label{color:#6200ee;color:var(--mdc-theme-primary, #6200ee)}:host(:not([disabled])) .mdc-text-field.mdc-text-field--focused:not(.mdc-text-field--invalid) .mdc-text-field__input:required~.mdc-floating-label::after,:host(:not([disabled])) .mdc-text-field.mdc-text-field--focused:not(.mdc-text-field--invalid) .mdc-text-field__input:required~.mdc-notched-outline .mdc-floating-label::after{color:#6200ee;color:var(--mdc-theme-primary, #6200ee)}:host(:not([disabled])) .mdc-text-field .mdc-text-field__input{color:var(--mdc-text-field-ink-color, rgba(0, 0, 0, 0.87))}:host(:not([disabled])) .mdc-text-field .mdc-text-field__input::placeholder{color:var(--mdc-text-field-label-ink-color, rgba(0, 0, 0, 0.6))}:host(:not([disabled])) .mdc-text-field-helper-line .mdc-text-field-helper-text:not(.mdc-text-field-helper-text--validation-msg),:host(:not([disabled])) .mdc-text-field-helper-line:not(.mdc-text-field--invalid) .mdc-text-field-character-counter{color:var(--mdc-text-field-label-ink-color, rgba(0, 0, 0, 0.6))}:host([disabled]) .mdc-text-field:not(.mdc-text-field--outlined){background-color:var(--mdc-text-field-disabled-fill-color, #fafafa)}:host([disabled]) .mdc-text-field.mdc-text-field--outlined mwc-notched-outline{--mdc-notched-outline-border-color: var(--mdc-text-field-outlined-disabled-border-color, rgba(0, 0, 0, 0.06))}:host([disabled]) .mdc-text-field:not(.mdc-text-field--invalid):not(.mdc-text-field--focused) .mdc-floating-label,:host([disabled]) .mdc-text-field:not(.mdc-text-field--invalid):not(.mdc-text-field--focused) .mdc-floating-label::after{color:var(--mdc-text-field-disabled-ink-color, rgba(0, 0, 0, 0.37))}:host([disabled]) .mdc-text-field .mdc-text-field__input,:host([disabled]) .mdc-text-field .mdc-text-field__input::placeholder{color:var(--mdc-text-field-disabled-ink-color, rgba(0, 0, 0, 0.37))}:host([disabled]) .mdc-text-field-helper-line .mdc-text-field-helper-text,:host([disabled]) .mdc-text-field-helper-line .mdc-text-field-character-counter{color:var(--mdc-text-field-disabled-ink-color, rgba(0, 0, 0, 0.37))}`;
+
+  /**
+  @license
+  Copyright 2019 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  */
+  let TextField = class TextField extends TextFieldBase {};
+  TextField.styles = style$4;
+  TextField = __decorate([customElement('mwc-textfield')], TextField);
+
+  /**
+   * @license
+   * Copyright 2016 Google Inc. All rights reserved.
+   *
+   * Licensed under the Apache License, Version 2.0 (the "License");
+   * you may not use this file except in compliance with the License.
+   * You may obtain a copy of the License at
+   *
+   *     http://www.apache.org/licenses/LICENSE-2.0
+   *
+   * Unless required by applicable law or agreed to in writing, software
+   * distributed under the License is distributed on an "AS IS" BASIS,
+   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * See the License for the specific language governing permissions and
+   * limitations under the License.
+   */
+  (() => {
+    var _a, _b, _c;
+    /* Symbols for private properties */
+
+
+    const _blockingElements = Symbol();
+
+    const _alreadyInertElements = Symbol();
+
+    const _topElParents = Symbol();
+
+    const _siblingsToRestore = Symbol();
+
+    const _parentMO = Symbol();
+    /* Symbols for private static methods */
+
+
+    const _topChanged = Symbol();
+
+    const _swapInertedSibling = Symbol();
+
+    const _inertSiblings = Symbol();
+
+    const _restoreInertedSiblings = Symbol();
+
+    const _getParents = Symbol();
+
+    const _getDistributedChildren = Symbol();
+
+    const _isInertable = Symbol();
+
+    const _handleMutations = Symbol();
+
+    class BlockingElementsImpl {
+      constructor() {
+        /**
+         * The blocking elements.
+         */
+        this[_a] = [];
+        /**
+         * Used to keep track of the parents of the top element, from the element
+         * itself up to body. When top changes, the old top might have been removed
+         * from the document, so we need to memoize the inerted parents' siblings
+         * in order to restore their inerteness when top changes.
+         */
+
+        this[_b] = [];
+        /**
+         * Elements that are already inert before the first blocking element is
+         * pushed.
+         */
+
+        this[_c] = new Set();
+      }
+
+      destructor() {
+        // Restore original inertness.
+        this[_restoreInertedSiblings](this[_topElParents]); // Note we don't want to make these properties nullable on the class,
+        // since then we'd need non-null casts in many places. Calling a method on
+        // a BlockingElements instance after calling destructor will result in an
+        // exception.
+
+
+        const nullable = this;
+        nullable[_blockingElements] = null;
+        nullable[_topElParents] = null;
+        nullable[_alreadyInertElements] = null;
+      }
+
+      get top() {
+        const elems = this[_blockingElements];
+        return elems[elems.length - 1] || null;
+      }
+
+      push(element) {
+        if (!element || element === this.top) {
+          return;
+        } // Remove it from the stack, we'll bring it to the top.
+
+
+        this.remove(element);
+
+        this[_topChanged](element);
+
+        this[_blockingElements].push(element);
+      }
+
+      remove(element) {
+        const i = this[_blockingElements].indexOf(element);
+
+        if (i === -1) {
+          return false;
+        }
+
+        this[_blockingElements].splice(i, 1); // Top changed only if the removed element was the top element.
+
+
+        if (i === this[_blockingElements].length) {
+          this[_topChanged](this.top);
+        }
+
+        return true;
+      }
+
+      pop() {
+        const top = this.top;
+        top && this.remove(top);
+        return top;
+      }
+
+      has(element) {
+        return this[_blockingElements].indexOf(element) !== -1;
+      }
+      /**
+       * Sets `inert` to all document elements except the new top element, its
+       * parents, and its distributed content.
+       */
+
+
+      [(_a = _blockingElements, _b = _topElParents, _c = _alreadyInertElements, _topChanged)](newTop) {
+        const toKeepInert = this[_alreadyInertElements];
+        const oldParents = this[_topElParents]; // No new top, reset old top if any.
+
+        if (!newTop) {
+          this[_restoreInertedSiblings](oldParents);
+
+          toKeepInert.clear();
+          this[_topElParents] = [];
+          return;
+        }
+
+        const newParents = this[_getParents](newTop); // New top is not contained in the main document!
+
+
+        if (newParents[newParents.length - 1].parentNode !== document.body) {
+          throw Error('Non-connected element cannot be a blocking element');
+        } // Cast here because we know we'll call _inertSiblings on newParents
+        // below.
+
+
+        this[_topElParents] = newParents;
+
+        const toSkip = this[_getDistributedChildren](newTop); // No previous top element.
+
+
+        if (!oldParents.length) {
+          this[_inertSiblings](newParents, toSkip, toKeepInert);
+
+          return;
+        }
+
+        let i = oldParents.length - 1;
+        let j = newParents.length - 1; // Find common parent. Index 0 is the element itself (so stop before it).
+
+        while (i > 0 && j > 0 && oldParents[i] === newParents[j]) {
+          i--;
+          j--;
+        } // If up the parents tree there are 2 elements that are siblings, swap
+        // the inerted sibling.
+
+
+        if (oldParents[i] !== newParents[j]) {
+          this[_swapInertedSibling](oldParents[i], newParents[j]);
+        } // Restore old parents siblings inertness.
+
+
+        i > 0 && this[_restoreInertedSiblings](oldParents.slice(0, i)); // Make new parents siblings inert.
+
+        j > 0 && this[_inertSiblings](newParents.slice(0, j), toSkip, null);
+      }
+      /**
+       * Swaps inertness between two sibling elements.
+       * Sets the property `inert` over the attribute since the inert spec
+       * doesn't specify if it should be reflected.
+       * https://html.spec.whatwg.org/multipage/interaction.html#inert
+       */
+
+
+      [_swapInertedSibling](oldInert, newInert) {
+        const siblingsToRestore = oldInert[_siblingsToRestore]; // oldInert is not contained in siblings to restore, so we have to check
+        // if it's inertable and if already inert.
+
+        if (this[_isInertable](oldInert) && !oldInert.inert) {
+          oldInert.inert = true;
+          siblingsToRestore.add(oldInert);
+        } // If newInert was already between the siblings to restore, it means it is
+        // inertable and must be restored.
+
+
+        if (siblingsToRestore.has(newInert)) {
+          newInert.inert = false;
+          siblingsToRestore.delete(newInert);
+        }
+
+        newInert[_parentMO] = oldInert[_parentMO];
+        newInert[_siblingsToRestore] = siblingsToRestore;
+        oldInert[_parentMO] = undefined;
+        oldInert[_siblingsToRestore] = undefined;
+      }
+      /**
+       * Restores original inertness to the siblings of the elements.
+       * Sets the property `inert` over the attribute since the inert spec
+       * doesn't specify if it should be reflected.
+       * https://html.spec.whatwg.org/multipage/interaction.html#inert
+       */
+
+
+      [_restoreInertedSiblings](elements) {
+        for (const element of elements) {
+          const mo = element[_parentMO];
+          mo.disconnect();
+          element[_parentMO] = undefined;
+          const siblings = element[_siblingsToRestore];
+
+          for (const sibling of siblings) {
+            sibling.inert = false;
+          }
+
+          element[_siblingsToRestore] = undefined;
+        }
+      }
+      /**
+       * Inerts the siblings of the elements except the elements to skip. Stores
+       * the inerted siblings into the element's symbol `_siblingsToRestore`.
+       * Pass `toKeepInert` to collect the already inert elements.
+       * Sets the property `inert` over the attribute since the inert spec
+       * doesn't specify if it should be reflected.
+       * https://html.spec.whatwg.org/multipage/interaction.html#inert
+       */
+
+
+      [_inertSiblings](elements, toSkip, toKeepInert) {
+        for (const element of elements) {
+          // Assume element is not a Document, so it must have a parentNode.
+          const parent = element.parentNode;
+          const children = parent.children;
+          const inertedSiblings = new Set();
+
+          for (let j = 0; j < children.length; j++) {
+            const sibling = children[j]; // Skip the input element, if not inertable or to be skipped.
+
+            if (sibling === element || !this[_isInertable](sibling) || toSkip && toSkip.has(sibling)) {
+              continue;
+            } // Should be collected since already inerted.
+
+
+            if (toKeepInert && sibling.inert) {
+              toKeepInert.add(sibling);
+            } else {
+              sibling.inert = true;
+              inertedSiblings.add(sibling);
+            }
+          } // Store the siblings that were inerted.
+
+
+          element[_siblingsToRestore] = inertedSiblings; // Observe only immediate children mutations on the parent.
+
+          const mo = new MutationObserver(this[_handleMutations].bind(this));
+          element[_parentMO] = mo;
+          let parentToObserve = parent; // If we're using the ShadyDOM polyfill, then our parent could be a
+          // shady root, which is an object that acts like a ShadowRoot, but isn't
+          // actually a node in the real DOM. Observe the real DOM parent instead.
+
+          const maybeShadyRoot = parentToObserve;
+
+          if (maybeShadyRoot.__shady && maybeShadyRoot.host) {
+            parentToObserve = maybeShadyRoot.host;
+          }
+
+          mo.observe(parentToObserve, {
+            childList: true
+          });
+        }
+      }
+      /**
+       * Handles newly added/removed nodes by toggling their inertness.
+       * It also checks if the current top Blocking Element has been removed,
+       * notifying and removing it.
+       */
+
+
+      [_handleMutations](mutations) {
+        const parents = this[_topElParents];
+        const toKeepInert = this[_alreadyInertElements];
+
+        for (const mutation of mutations) {
+          // If the target is a shadowRoot, get its host as we skip shadowRoots when
+          // computing _topElParents.
+          const target = mutation.target.host || mutation.target;
+          const idx = target === document.body ? parents.length : parents.indexOf(target);
+          const inertedChild = parents[idx - 1];
+          const inertedSiblings = inertedChild[_siblingsToRestore]; // To restore.
+
+          for (let i = 0; i < mutation.removedNodes.length; i++) {
+            const sibling = mutation.removedNodes[i];
+
+            if (sibling === inertedChild) {
+              console.info('Detected removal of the top Blocking Element.');
+              this.pop();
+              return;
+            }
+
+            if (inertedSiblings.has(sibling)) {
+              sibling.inert = false;
+              inertedSiblings.delete(sibling);
+            }
+          } // To inert.
+
+
+          for (let i = 0; i < mutation.addedNodes.length; i++) {
+            const sibling = mutation.addedNodes[i];
+
+            if (!this[_isInertable](sibling)) {
+              continue;
+            }
+
+            if (toKeepInert && sibling.inert) {
+              toKeepInert.add(sibling);
+            } else {
+              sibling.inert = true;
+              inertedSiblings.add(sibling);
+            }
+          }
+        }
+      }
+      /**
+       * Returns if the element is inertable.
+       */
+
+
+      [_isInertable](element) {
+        return false === /^(style|template|script)$/.test(element.localName);
+      }
+      /**
+       * Returns the list of newParents of an element, starting from element
+       * (included) up to `document.body` (excluded).
+       */
+
+
+      [_getParents](element) {
+        const parents = [];
+        let current = element; // Stop to body.
+
+        while (current && current !== document.body) {
+          // Skip shadow roots.
+          if (current.nodeType === Node.ELEMENT_NODE) {
+            parents.push(current);
+          } // ShadowDom v1
+
+
+          if (current.assignedSlot) {
+            // Collect slots from deepest slot to top.
+            while (current = current.assignedSlot) {
+              parents.push(current);
+            } // Continue the search on the top slot.
+
+
+            current = parents.pop();
+            continue;
+          }
+
+          current = current.parentNode || current.host;
+        }
+
+        return parents;
+      }
+      /**
+       * Returns the distributed children of the element's shadow root.
+       * Returns null if the element doesn't have a shadow root.
+       */
+
+
+      [_getDistributedChildren](element) {
+        const shadowRoot = element.shadowRoot;
+
+        if (!shadowRoot) {
+          return null;
+        }
+
+        const result = new Set();
+        let i;
+        let j;
+        let nodes;
+        const slots = shadowRoot.querySelectorAll('slot');
+
+        if (slots.length && slots[0].assignedNodes) {
+          for (i = 0; i < slots.length; i++) {
+            nodes = slots[i].assignedNodes({
+              flatten: true
+            });
+
+            for (j = 0; j < nodes.length; j++) {
+              if (nodes[j].nodeType === Node.ELEMENT_NODE) {
+                result.add(nodes[j]);
+              }
+            }
+          } // No need to search for <content>.
+
+        }
+
+        return result;
+      }
+
+    }
+
+    document.$blockingElements = new BlockingElementsImpl();
+  })();
+
+  /**
+   * This work is licensed under the W3C Software and Document License
+   * (http://www.w3.org/Consortium/Legal/2015/copyright-software-and-document).
+   */
+  // Convenience function for converting NodeLists.
+
+  /** @type {typeof Array.prototype.slice} */
+  const slice = Array.prototype.slice;
+  /**
+   * IE has a non-standard name for "matches".
+   * @type {typeof Element.prototype.matches}
+   */
+
+  const matches$1 = Element.prototype.matches || Element.prototype.msMatchesSelector;
+  /** @type {string} */
+
+  const _focusableElementsString = ['a[href]', 'area[href]', 'input:not([disabled])', 'select:not([disabled])', 'textarea:not([disabled])', 'button:not([disabled])', 'iframe', 'object', 'embed', '[contenteditable]'].join(',');
+  /**
+   * `InertRoot` manages a single inert subtree, i.e. a DOM subtree whose root element has an `inert`
+   * attribute.
+   *
+   * Its main functions are:
+   *
+   * - to create and maintain a set of managed `InertNode`s, including when mutations occur in the
+   *   subtree. The `makeSubtreeUnfocusable()` method handles collecting `InertNode`s via registering
+   *   each focusable node in the subtree with the singleton `InertManager` which manages all known
+   *   focusable nodes within inert subtrees. `InertManager` ensures that a single `InertNode`
+   *   instance exists for each focusable node which has at least one inert root as an ancestor.
+   *
+   * - to notify all managed `InertNode`s when this subtree stops being inert (i.e. when the `inert`
+   *   attribute is removed from the root node). This is handled in the destructor, which calls the
+   *   `deregister` method on `InertManager` for each managed inert node.
+   */
+
+
+  class InertRoot {
+    /**
+     * @param {!Element} rootElement The Element at the root of the inert subtree.
+     * @param {!InertManager} inertManager The global singleton InertManager object.
+     */
+    constructor(rootElement, inertManager) {
+      /** @type {!InertManager} */
+      this._inertManager = inertManager;
+      /** @type {!Element} */
+
+      this._rootElement = rootElement;
+      /**
+       * @type {!Set<!InertNode>}
+       * All managed focusable nodes in this InertRoot's subtree.
+       */
+
+      this._managedNodes = new Set(); // Make the subtree hidden from assistive technology
+
+      if (this._rootElement.hasAttribute('aria-hidden')) {
+        /** @type {?string} */
+        this._savedAriaHidden = this._rootElement.getAttribute('aria-hidden');
+      } else {
+        this._savedAriaHidden = null;
+      }
+
+      this._rootElement.setAttribute('aria-hidden', 'true'); // Make all focusable elements in the subtree unfocusable and add them to _managedNodes
+
+
+      this._makeSubtreeUnfocusable(this._rootElement); // Watch for:
+      // - any additions in the subtree: make them unfocusable too
+      // - any removals from the subtree: remove them from this inert root's managed nodes
+      // - attribute changes: if `tabindex` is added, or removed from an intrinsically focusable
+      //   element, make that node a managed node.
+
+
+      this._observer = new MutationObserver(this._onMutation.bind(this));
+
+      this._observer.observe(this._rootElement, {
+        attributes: true,
+        childList: true,
+        subtree: true
+      });
+    }
+    /**
+     * Call this whenever this object is about to become obsolete.  This unwinds all of the state
+     * stored in this object and updates the state of all of the managed nodes.
+     */
+
+
+    destructor() {
+      this._observer.disconnect();
+
+      if (this._rootElement) {
+        if (this._savedAriaHidden !== null) {
+          this._rootElement.setAttribute('aria-hidden', this._savedAriaHidden);
+        } else {
+          this._rootElement.removeAttribute('aria-hidden');
+        }
+      }
+
+      this._managedNodes.forEach(function (inertNode) {
+        this._unmanageNode(inertNode.node);
+      }, this); // Note we cast the nulls to the ANY type here because:
+      // 1) We want the class properties to be declared as non-null, or else we
+      //    need even more casts throughout this code. All bets are off if an
+      //    instance has been destroyed and a method is called.
+      // 2) We don't want to cast "this", because we want type-aware optimizations
+      //    to know which properties we're setting.
+
+
+      this._observer =
+      /** @type {?} */
+      null;
+      this._rootElement =
+      /** @type {?} */
+      null;
+      this._managedNodes =
+      /** @type {?} */
+      null;
+      this._inertManager =
+      /** @type {?} */
+      null;
+    }
+    /**
+     * @return {!Set<!InertNode>} A copy of this InertRoot's managed nodes set.
+     */
+
+
+    get managedNodes() {
+      return new Set(this._managedNodes);
+    }
+    /** @return {boolean} */
+
+
+    get hasSavedAriaHidden() {
+      return this._savedAriaHidden !== null;
+    }
+    /** @param {?string} ariaHidden */
+
+
+    set savedAriaHidden(ariaHidden) {
+      this._savedAriaHidden = ariaHidden;
+    }
+    /** @return {?string} */
+
+
+    get savedAriaHidden() {
+      return this._savedAriaHidden;
+    }
+    /**
+     * @param {!Node} startNode
+     */
+
+
+    _makeSubtreeUnfocusable(startNode) {
+      composedTreeWalk(startNode, node => this._visitNode(node));
+      let activeElement = document.activeElement;
+
+      if (!document.body.contains(startNode)) {
+        // startNode may be in shadow DOM, so find its nearest shadowRoot to get the activeElement.
+        let node = startNode;
+        /** @type {!ShadowRoot|undefined} */
+
+        let root = undefined;
+
+        while (node) {
+          if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+            root =
+            /** @type {!ShadowRoot} */
+            node;
+            break;
+          }
+
+          node = node.parentNode;
+        }
+
+        if (root) {
+          activeElement = root.activeElement;
+        }
+      }
+
+      if (startNode.contains(activeElement)) {
+        activeElement.blur(); // In IE11, if an element is already focused, and then set to tabindex=-1
+        // calling blur() will not actually move the focus.
+        // To work around this we call focus() on the body instead.
+
+        if (activeElement === document.activeElement) {
+          document.body.focus();
+        }
+      }
+    }
+    /**
+     * @param {!Node} node
+     */
+
+
+    _visitNode(node) {
+      if (node.nodeType !== Node.ELEMENT_NODE) {
+        return;
+      }
+
+      const element =
+      /** @type {!Element} */
+      node; // If a descendant inert root becomes un-inert, its descendants will still be inert because of
+      // this inert root, so all of its managed nodes need to be adopted by this InertRoot.
+
+      if (element !== this._rootElement && element.hasAttribute('inert')) {
+        this._adoptInertRoot(element);
+      }
+
+      if (matches$1.call(element, _focusableElementsString) || element.hasAttribute('tabindex')) {
+        this._manageNode(element);
+      }
+    }
+    /**
+     * Register the given node with this InertRoot and with InertManager.
+     * @param {!Node} node
+     */
+
+
+    _manageNode(node) {
+      const inertNode = this._inertManager.register(node, this);
+
+      this._managedNodes.add(inertNode);
+    }
+    /**
+     * Unregister the given node with this InertRoot and with InertManager.
+     * @param {!Node} node
+     */
+
+
+    _unmanageNode(node) {
+      const inertNode = this._inertManager.deregister(node, this);
+
+      if (inertNode) {
+        this._managedNodes.delete(inertNode);
+      }
+    }
+    /**
+     * Unregister the entire subtree starting at `startNode`.
+     * @param {!Node} startNode
+     */
+
+
+    _unmanageSubtree(startNode) {
+      composedTreeWalk(startNode, node => this._unmanageNode(node));
+    }
+    /**
+     * If a descendant node is found with an `inert` attribute, adopt its managed nodes.
+     * @param {!Element} node
+     */
+
+
+    _adoptInertRoot(node) {
+      let inertSubroot = this._inertManager.getInertRoot(node); // During initialisation this inert root may not have been registered yet,
+      // so register it now if need be.
+
+
+      if (!inertSubroot) {
+        this._inertManager.setInert(node, true);
+
+        inertSubroot = this._inertManager.getInertRoot(node);
+      }
+
+      inertSubroot.managedNodes.forEach(function (savedInertNode) {
+        this._manageNode(savedInertNode.node);
+      }, this);
+    }
+    /**
+     * Callback used when mutation observer detects subtree additions, removals, or attribute changes.
+     * @param {!Array<!MutationRecord>} records
+     * @param {!MutationObserver} self
+     */
+
+
+    _onMutation(records, self) {
+      records.forEach(function (record) {
+        const target =
+        /** @type {!Element} */
+        record.target;
+
+        if (record.type === 'childList') {
+          // Manage added nodes
+          slice.call(record.addedNodes).forEach(function (node) {
+            this._makeSubtreeUnfocusable(node);
+          }, this); // Un-manage removed nodes
+
+          slice.call(record.removedNodes).forEach(function (node) {
+            this._unmanageSubtree(node);
+          }, this);
+        } else if (record.type === 'attributes') {
+          if (record.attributeName === 'tabindex') {
+            // Re-initialise inert node if tabindex changes
+            this._manageNode(target);
+          } else if (target !== this._rootElement && record.attributeName === 'inert' && target.hasAttribute('inert')) {
+            // If a new inert root is added, adopt its managed nodes and make sure it knows about the
+            // already managed nodes from this inert subroot.
+            this._adoptInertRoot(target);
+
+            const inertSubroot = this._inertManager.getInertRoot(target);
+
+            this._managedNodes.forEach(function (managedNode) {
+              if (target.contains(managedNode.node)) {
+                inertSubroot._manageNode(managedNode.node);
+              }
+            });
+          }
+        }
+      }, this);
+    }
+
+  }
+  /**
+   * `InertNode` initialises and manages a single inert node.
+   * A node is inert if it is a descendant of one or more inert root elements.
+   *
+   * On construction, `InertNode` saves the existing `tabindex` value for the node, if any, and
+   * either removes the `tabindex` attribute or sets it to `-1`, depending on whether the element
+   * is intrinsically focusable or not.
+   *
+   * `InertNode` maintains a set of `InertRoot`s which are descendants of this `InertNode`. When an
+   * `InertRoot` is destroyed, and calls `InertManager.deregister()`, the `InertManager` notifies the
+   * `InertNode` via `removeInertRoot()`, which in turn destroys the `InertNode` if no `InertRoot`s
+   * remain in the set. On destruction, `InertNode` reinstates the stored `tabindex` if one exists,
+   * or removes the `tabindex` attribute if the element is intrinsically focusable.
+   */
+
+
+  class InertNode {
+    /**
+     * @param {!Node} node A focusable element to be made inert.
+     * @param {!InertRoot} inertRoot The inert root element associated with this inert node.
+     */
+    constructor(node, inertRoot) {
+      /** @type {!Node} */
+      this._node = node;
+      /** @type {boolean} */
+
+      this._overrodeFocusMethod = false;
+      /**
+       * @type {!Set<!InertRoot>} The set of descendant inert roots.
+       *    If and only if this set becomes empty, this node is no longer inert.
+       */
+
+      this._inertRoots = new Set([inertRoot]);
+      /** @type {?number} */
+
+      this._savedTabIndex = null;
+      /** @type {boolean} */
+
+      this._destroyed = false; // Save any prior tabindex info and make this node untabbable
+
+      this.ensureUntabbable();
+    }
+    /**
+     * Call this whenever this object is about to become obsolete.
+     * This makes the managed node focusable again and deletes all of the previously stored state.
+     */
+
+
+    destructor() {
+      this._throwIfDestroyed();
+
+      if (this._node && this._node.nodeType === Node.ELEMENT_NODE) {
+        const element =
+        /** @type {!Element} */
+        this._node;
+
+        if (this._savedTabIndex !== null) {
+          element.setAttribute('tabindex', this._savedTabIndex);
+        } else {
+          element.removeAttribute('tabindex');
+        } // Use `delete` to restore native focus method.
+
+
+        if (this._overrodeFocusMethod) {
+          delete element.focus;
+        }
+      } // See note in InertRoot.destructor for why we cast these nulls to ANY.
+
+
+      this._node =
+      /** @type {?} */
+      null;
+      this._inertRoots =
+      /** @type {?} */
+      null;
+      this._destroyed = true;
+    }
+    /**
+     * @type {boolean} Whether this object is obsolete because the managed node is no longer inert.
+     * If the object has been destroyed, any attempt to access it will cause an exception.
+     */
+
+
+    get destroyed() {
+      return (
+        /** @type {!InertNode} */
+        this._destroyed
+      );
+    }
+    /**
+     * Throw if user tries to access destroyed InertNode.
+     */
+
+
+    _throwIfDestroyed() {
+      if (this.destroyed) {
+        throw new Error('Trying to access destroyed InertNode');
+      }
+    }
+    /** @return {boolean} */
+
+
+    get hasSavedTabIndex() {
+      return this._savedTabIndex !== null;
+    }
+    /** @return {!Node} */
+
+
+    get node() {
+      this._throwIfDestroyed();
+
+      return this._node;
+    }
+    /** @param {?number} tabIndex */
+
+
+    set savedTabIndex(tabIndex) {
+      this._throwIfDestroyed();
+
+      this._savedTabIndex = tabIndex;
+    }
+    /** @return {?number} */
+
+
+    get savedTabIndex() {
+      this._throwIfDestroyed();
+
+      return this._savedTabIndex;
+    }
+    /** Save the existing tabindex value and make the node untabbable and unfocusable */
+
+
+    ensureUntabbable() {
+      if (this.node.nodeType !== Node.ELEMENT_NODE) {
+        return;
+      }
+
+      const element =
+      /** @type {!Element} */
+      this.node;
+
+      if (matches$1.call(element, _focusableElementsString)) {
+        if (
+        /** @type {!HTMLElement} */
+        element.tabIndex === -1 && this.hasSavedTabIndex) {
+          return;
+        }
+
+        if (element.hasAttribute('tabindex')) {
+          this._savedTabIndex =
+          /** @type {!HTMLElement} */
+          element.tabIndex;
+        }
+
+        element.setAttribute('tabindex', '-1');
+
+        if (element.nodeType === Node.ELEMENT_NODE) {
+          element.focus = function () {};
+
+          this._overrodeFocusMethod = true;
+        }
+      } else if (element.hasAttribute('tabindex')) {
+        this._savedTabIndex =
+        /** @type {!HTMLElement} */
+        element.tabIndex;
+        element.removeAttribute('tabindex');
+      }
+    }
+    /**
+     * Add another inert root to this inert node's set of managing inert roots.
+     * @param {!InertRoot} inertRoot
+     */
+
+
+    addInertRoot(inertRoot) {
+      this._throwIfDestroyed();
+
+      this._inertRoots.add(inertRoot);
+    }
+    /**
+     * Remove the given inert root from this inert node's set of managing inert roots.
+     * If the set of managing inert roots becomes empty, this node is no longer inert,
+     * so the object should be destroyed.
+     * @param {!InertRoot} inertRoot
+     */
+
+
+    removeInertRoot(inertRoot) {
+      this._throwIfDestroyed();
+
+      this._inertRoots.delete(inertRoot);
+
+      if (this._inertRoots.size === 0) {
+        this.destructor();
+      }
+    }
+
+  }
+  /**
+   * InertManager is a per-document singleton object which manages all inert roots and nodes.
+   *
+   * When an element becomes an inert root by having an `inert` attribute set and/or its `inert`
+   * property set to `true`, the `setInert` method creates an `InertRoot` object for the element.
+   * The `InertRoot` in turn registers itself as managing all of the element's focusable descendant
+   * nodes via the `register()` method. The `InertManager` ensures that a single `InertNode` instance
+   * is created for each such node, via the `_managedNodes` map.
+   */
+
+
+  class InertManager {
+    /**
+     * @param {!Document} document
+     */
+    constructor(document) {
+      if (!document) {
+        throw new Error('Missing required argument; InertManager needs to wrap a document.');
+      }
+      /** @type {!Document} */
+
+
+      this._document = document;
+      /**
+       * All managed nodes known to this InertManager. In a map to allow looking up by Node.
+       * @type {!Map<!Node, !InertNode>}
+       */
+
+      this._managedNodes = new Map();
+      /**
+       * All inert roots known to this InertManager. In a map to allow looking up by Node.
+       * @type {!Map<!Node, !InertRoot>}
+       */
+
+      this._inertRoots = new Map();
+      /**
+       * Observer for mutations on `document.body`.
+       * @type {!MutationObserver}
+       */
+
+      this._observer = new MutationObserver(this._watchForInert.bind(this)); // Add inert style.
+
+      addInertStyle(document.head || document.body || document.documentElement); // Wait for document to be loaded.
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', this._onDocumentLoaded.bind(this));
+      } else {
+        this._onDocumentLoaded();
+      }
+    }
+    /**
+     * Set whether the given element should be an inert root or not.
+     * @param {!Element} root
+     * @param {boolean} inert
+     */
+
+
+    setInert(root, inert) {
+      if (inert) {
+        if (this._inertRoots.has(root)) {
+          // element is already inert
+          return;
+        }
+
+        const inertRoot = new InertRoot(root, this);
+        root.setAttribute('inert', '');
+
+        this._inertRoots.set(root, inertRoot); // If not contained in the document, it must be in a shadowRoot.
+        // Ensure inert styles are added there.
+
+
+        if (!this._document.body.contains(root)) {
+          let parent = root.parentNode;
+
+          while (parent) {
+            if (parent.nodeType === 11) {
+              addInertStyle(parent);
+            }
+
+            parent = parent.parentNode;
+          }
+        }
+      } else {
+        if (!this._inertRoots.has(root)) {
+          // element is already non-inert
+          return;
+        }
+
+        const inertRoot = this._inertRoots.get(root);
+
+        inertRoot.destructor();
+
+        this._inertRoots.delete(root);
+
+        root.removeAttribute('inert');
+      }
+    }
+    /**
+     * Get the InertRoot object corresponding to the given inert root element, if any.
+     * @param {!Node} element
+     * @return {!InertRoot|undefined}
+     */
+
+
+    getInertRoot(element) {
+      return this._inertRoots.get(element);
+    }
+    /**
+     * Register the given InertRoot as managing the given node.
+     * In the case where the node has a previously existing inert root, this inert root will
+     * be added to its set of inert roots.
+     * @param {!Node} node
+     * @param {!InertRoot} inertRoot
+     * @return {!InertNode} inertNode
+     */
+
+
+    register(node, inertRoot) {
+      let inertNode = this._managedNodes.get(node);
+
+      if (inertNode !== undefined) {
+        // node was already in an inert subtree
+        inertNode.addInertRoot(inertRoot);
+      } else {
+        inertNode = new InertNode(node, inertRoot);
+      }
+
+      this._managedNodes.set(node, inertNode);
+
+      return inertNode;
+    }
+    /**
+     * De-register the given InertRoot as managing the given inert node.
+     * Removes the inert root from the InertNode's set of managing inert roots, and remove the inert
+     * node from the InertManager's set of managed nodes if it is destroyed.
+     * If the node is not currently managed, this is essentially a no-op.
+     * @param {!Node} node
+     * @param {!InertRoot} inertRoot
+     * @return {?InertNode} The potentially destroyed InertNode associated with this node, if any.
+     */
+
+
+    deregister(node, inertRoot) {
+      const inertNode = this._managedNodes.get(node);
+
+      if (!inertNode) {
+        return null;
+      }
+
+      inertNode.removeInertRoot(inertRoot);
+
+      if (inertNode.destroyed) {
+        this._managedNodes.delete(node);
+      }
+
+      return inertNode;
+    }
+    /**
+     * Callback used when document has finished loading.
+     */
+
+
+    _onDocumentLoaded() {
+      // Find all inert roots in document and make them actually inert.
+      const inertElements = slice.call(this._document.querySelectorAll('[inert]'));
+      inertElements.forEach(function (inertElement) {
+        this.setInert(inertElement, true);
+      }, this); // Comment this out to use programmatic API only.
+
+      this._observer.observe(this._document.body, {
+        attributes: true,
+        subtree: true,
+        childList: true
+      });
+    }
+    /**
+     * Callback used when mutation observer detects attribute changes.
+     * @param {!Array<!MutationRecord>} records
+     * @param {!MutationObserver} self
+     */
+
+
+    _watchForInert(records, self) {
+      const _this = this;
+
+      records.forEach(function (record) {
+        switch (record.type) {
+          case 'childList':
+            slice.call(record.addedNodes).forEach(function (node) {
+              if (node.nodeType !== Node.ELEMENT_NODE) {
+                return;
+              }
+
+              const inertElements = slice.call(node.querySelectorAll('[inert]'));
+
+              if (matches$1.call(node, '[inert]')) {
+                inertElements.unshift(node);
+              }
+
+              inertElements.forEach(function (inertElement) {
+                this.setInert(inertElement, true);
+              }, _this);
+            }, _this);
+            break;
+
+          case 'attributes':
+            if (record.attributeName !== 'inert') {
+              return;
+            }
+
+            const target =
+            /** @type {!Element} */
+            record.target;
+            const inert = target.hasAttribute('inert');
+
+            _this.setInert(target, inert);
+
+            break;
+        }
+      }, this);
+    }
+
+  }
+  /**
+   * Recursively walk the composed tree from |node|.
+   * @param {!Node} node
+   * @param {(function (!Element))=} callback Callback to be called for each element traversed,
+   *     before descending into child nodes.
+   * @param {?ShadowRoot=} shadowRootAncestor The nearest ShadowRoot ancestor, if any.
+   */
+
+
+  function composedTreeWalk(node, callback, shadowRootAncestor) {
+    if (node.nodeType == Node.ELEMENT_NODE) {
+      const element =
+      /** @type {!Element} */
+      node;
+
+      if (callback) {
+        callback(element);
+      } // Descend into node:
+      // If it has a ShadowRoot, ignore all child elements - these will be picked
+      // up by the <content> or <shadow> elements. Descend straight into the
+      // ShadowRoot.
+
+
+      const shadowRoot =
+      /** @type {!HTMLElement} */
+      element.shadowRoot;
+
+      if (shadowRoot) {
+        composedTreeWalk(shadowRoot, callback);
+        return;
+      } // If it is a <content> element, descend into distributed elements - these
+      // are elements from outside the shadow root which are rendered inside the
+      // shadow DOM.
+
+
+      if (element.localName == 'content') {
+        const content =
+        /** @type {!HTMLContentElement} */
+        element; // Verifies if ShadowDom v0 is supported.
+
+        const distributedNodes = content.getDistributedNodes ? content.getDistributedNodes() : [];
+
+        for (let i = 0; i < distributedNodes.length; i++) {
+          composedTreeWalk(distributedNodes[i], callback);
+        }
+
+        return;
+      } // If it is a <slot> element, descend into assigned nodes - these
+      // are elements from outside the shadow root which are rendered inside the
+      // shadow DOM.
+
+
+      if (element.localName == 'slot') {
+        const slot =
+        /** @type {!HTMLSlotElement} */
+        element; // Verify if ShadowDom v1 is supported.
+
+        const distributedNodes = slot.assignedNodes ? slot.assignedNodes({
+          flatten: true
+        }) : [];
+
+        for (let i = 0; i < distributedNodes.length; i++) {
+          composedTreeWalk(distributedNodes[i], callback);
+        }
+
+        return;
+      }
+    } // If it is neither the parent of a ShadowRoot, a <content> element, a <slot>
+    // element, nor a <shadow> element recurse normally.
+
+
+    let child = node.firstChild;
+
+    while (child != null) {
+      composedTreeWalk(child, callback);
+      child = child.nextSibling;
+    }
+  }
+  /**
+   * Adds a style element to the node containing the inert specific styles
+   * @param {!Node} node
+   */
+
+
+  function addInertStyle(node) {
+    if (node.querySelector('style#inert-style')) {
+      return;
+    }
+
+    const style = document.createElement('style');
+    style.setAttribute('id', 'inert-style');
+    style.textContent = '\n' + '[inert] {\n' + '  pointer-events: none;\n' + '  cursor: default;\n' + '}\n' + '\n' + '[inert], [inert] * {\n' + '  user-select: none;\n' + '  -webkit-user-select: none;\n' + '  -moz-user-select: none;\n' + '  -ms-user-select: none;\n' + '}\n';
+    node.appendChild(style);
+  }
+  /** @type {!InertManager} */
+
+
+  const inertManager = new InertManager(document);
+
+  if (!Element.prototype.hasOwnProperty('inert')) {
+    Object.defineProperty(Element.prototype, 'inert', {
+      enumerable: true,
+
+      /** @this {!Element} */
+      get: function () {
+        return this.hasAttribute('inert');
+      },
+
+      /** @this {!Element} */
+      set: function (inert) {
+        inertManager.setInert(this, inert);
+      }
+    });
+  }
+
+  /**
+   * @license
+   * Copyright 2016 Google Inc.
+   *
+   * Permission is hereby granted, free of charge, to any person obtaining a copy
+   * of this software and associated documentation files (the "Software"), to deal
+   * in the Software without restriction, including without limitation the rights
+   * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   * copies of the Software, and to permit persons to whom the Software is
+   * furnished to do so, subject to the following conditions:
+   *
+   * The above copyright notice and this permission notice shall be included in
+   * all copies or substantial portions of the Software.
+   *
+   * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   * THE SOFTWARE.
+   */
+  var cssClasses$6 = {
+    CLOSING: 'mdc-dialog--closing',
+    OPEN: 'mdc-dialog--open',
+    OPENING: 'mdc-dialog--opening',
+    SCROLLABLE: 'mdc-dialog--scrollable',
+    SCROLL_LOCK: 'mdc-dialog-scroll-lock',
+    STACKED: 'mdc-dialog--stacked'
+  };
+  var strings$4 = {
+    ACTION_ATTRIBUTE: 'data-mdc-dialog-action',
+    BUTTON_DEFAULT_ATTRIBUTE: 'data-mdc-dialog-button-default',
+    BUTTON_SELECTOR: '.mdc-dialog__button',
+    CLOSED_EVENT: 'MDCDialog:closed',
+    CLOSE_ACTION: 'close',
+    CLOSING_EVENT: 'MDCDialog:closing',
+    CONTAINER_SELECTOR: '.mdc-dialog__container',
+    CONTENT_SELECTOR: '.mdc-dialog__content',
+    DESTROY_ACTION: 'destroy',
+    INITIAL_FOCUS_ATTRIBUTE: 'data-mdc-dialog-initial-focus',
+    OPENED_EVENT: 'MDCDialog:opened',
+    OPENING_EVENT: 'MDCDialog:opening',
+    SCRIM_SELECTOR: '.mdc-dialog__scrim',
+    SUPPRESS_DEFAULT_PRESS_SELECTOR: ['textarea', '.mdc-menu .mdc-list-item'].join(', '),
+    SURFACE_SELECTOR: '.mdc-dialog__surface'
+  };
+  var numbers$3 = {
+    DIALOG_ANIMATION_CLOSE_TIME_MS: 75,
+    DIALOG_ANIMATION_OPEN_TIME_MS: 150
+  };
+
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   *
+   * Permission is hereby granted, free of charge, to any person obtaining a copy
+   * of this software and associated documentation files (the "Software"), to deal
+   * in the Software without restriction, including without limitation the rights
+   * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   * copies of the Software, and to permit persons to whom the Software is
+   * furnished to do so, subject to the following conditions:
+   *
+   * The above copyright notice and this permission notice shall be included in
+   * all copies or substantial portions of the Software.
+   *
+   * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   * THE SOFTWARE.
+   */
+
+  var MDCDialogFoundation =
+  /** @class */
+  function (_super) {
+    __extends(MDCDialogFoundation, _super);
+
+    function MDCDialogFoundation(adapter) {
+      var _this = _super.call(this, __assign({}, MDCDialogFoundation.defaultAdapter, adapter)) || this;
+
+      _this.isOpen_ = false;
+      _this.animationFrame_ = 0;
+      _this.animationTimer_ = 0;
+      _this.layoutFrame_ = 0;
+      _this.escapeKeyAction_ = strings$4.CLOSE_ACTION;
+      _this.scrimClickAction_ = strings$4.CLOSE_ACTION;
+      _this.autoStackButtons_ = true;
+      _this.areButtonsStacked_ = false;
+      return _this;
+    }
+
+    Object.defineProperty(MDCDialogFoundation, "cssClasses", {
+      get: function () {
+        return cssClasses$6;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCDialogFoundation, "strings", {
+      get: function () {
+        return strings$4;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCDialogFoundation, "numbers", {
+      get: function () {
+        return numbers$3;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCDialogFoundation, "defaultAdapter", {
+      get: function () {
+        return {
+          addBodyClass: function () {
+            return undefined;
+          },
+          addClass: function () {
+            return undefined;
+          },
+          areButtonsStacked: function () {
+            return false;
+          },
+          clickDefaultButton: function () {
+            return undefined;
+          },
+          eventTargetMatches: function () {
+            return false;
+          },
+          getActionFromEvent: function () {
+            return '';
+          },
+          getInitialFocusEl: function () {
+            return null;
+          },
+          hasClass: function () {
+            return false;
+          },
+          isContentScrollable: function () {
+            return false;
+          },
+          notifyClosed: function () {
+            return undefined;
+          },
+          notifyClosing: function () {
+            return undefined;
+          },
+          notifyOpened: function () {
+            return undefined;
+          },
+          notifyOpening: function () {
+            return undefined;
+          },
+          releaseFocus: function () {
+            return undefined;
+          },
+          removeBodyClass: function () {
+            return undefined;
+          },
+          removeClass: function () {
+            return undefined;
+          },
+          reverseButtons: function () {
+            return undefined;
+          },
+          trapFocus: function () {
+            return undefined;
+          }
+        };
+      },
+      enumerable: true,
+      configurable: true
+    });
+
+    MDCDialogFoundation.prototype.init = function () {
+      if (this.adapter_.hasClass(cssClasses$6.STACKED)) {
+        this.setAutoStackButtons(false);
+      }
+    };
+
+    MDCDialogFoundation.prototype.destroy = function () {
+      if (this.isOpen_) {
+        this.close(strings$4.DESTROY_ACTION);
+      }
+
+      if (this.animationTimer_) {
+        clearTimeout(this.animationTimer_);
+        this.handleAnimationTimerEnd_();
+      }
+
+      if (this.layoutFrame_) {
+        cancelAnimationFrame(this.layoutFrame_);
+        this.layoutFrame_ = 0;
+      }
+    };
+
+    MDCDialogFoundation.prototype.open = function () {
+      var _this = this;
+
+      this.isOpen_ = true;
+      this.adapter_.notifyOpening();
+      this.adapter_.addClass(cssClasses$6.OPENING); // Wait a frame once display is no longer "none", to establish basis for animation
+
+      this.runNextAnimationFrame_(function () {
+        _this.adapter_.addClass(cssClasses$6.OPEN);
+
+        _this.adapter_.addBodyClass(cssClasses$6.SCROLL_LOCK);
+
+        _this.layout();
+
+        _this.animationTimer_ = setTimeout(function () {
+          _this.handleAnimationTimerEnd_();
+
+          _this.adapter_.trapFocus(_this.adapter_.getInitialFocusEl());
+
+          _this.adapter_.notifyOpened();
+        }, numbers$3.DIALOG_ANIMATION_OPEN_TIME_MS);
+      });
+    };
+
+    MDCDialogFoundation.prototype.close = function (action) {
+      var _this = this;
+
+      if (action === void 0) {
+        action = '';
+      }
+
+      if (!this.isOpen_) {
+        // Avoid redundant close calls (and events), e.g. from keydown on elements that inherently emit click
+        return;
+      }
+
+      this.isOpen_ = false;
+      this.adapter_.notifyClosing(action);
+      this.adapter_.addClass(cssClasses$6.CLOSING);
+      this.adapter_.removeClass(cssClasses$6.OPEN);
+      this.adapter_.removeBodyClass(cssClasses$6.SCROLL_LOCK);
+      cancelAnimationFrame(this.animationFrame_);
+      this.animationFrame_ = 0;
+      clearTimeout(this.animationTimer_);
+      this.animationTimer_ = setTimeout(function () {
+        _this.adapter_.releaseFocus();
+
+        _this.handleAnimationTimerEnd_();
+
+        _this.adapter_.notifyClosed(action);
+      }, numbers$3.DIALOG_ANIMATION_CLOSE_TIME_MS);
+    };
+
+    MDCDialogFoundation.prototype.isOpen = function () {
+      return this.isOpen_;
+    };
+
+    MDCDialogFoundation.prototype.getEscapeKeyAction = function () {
+      return this.escapeKeyAction_;
+    };
+
+    MDCDialogFoundation.prototype.setEscapeKeyAction = function (action) {
+      this.escapeKeyAction_ = action;
+    };
+
+    MDCDialogFoundation.prototype.getScrimClickAction = function () {
+      return this.scrimClickAction_;
+    };
+
+    MDCDialogFoundation.prototype.setScrimClickAction = function (action) {
+      this.scrimClickAction_ = action;
+    };
+
+    MDCDialogFoundation.prototype.getAutoStackButtons = function () {
+      return this.autoStackButtons_;
+    };
+
+    MDCDialogFoundation.prototype.setAutoStackButtons = function (autoStack) {
+      this.autoStackButtons_ = autoStack;
+    };
+
+    MDCDialogFoundation.prototype.layout = function () {
+      var _this = this;
+
+      if (this.layoutFrame_) {
+        cancelAnimationFrame(this.layoutFrame_);
+      }
+
+      this.layoutFrame_ = requestAnimationFrame(function () {
+        _this.layoutInternal_();
+
+        _this.layoutFrame_ = 0;
+      });
+    };
+    /** Handles click on the dialog root element. */
+
+
+    MDCDialogFoundation.prototype.handleClick = function (evt) {
+      var isScrim = this.adapter_.eventTargetMatches(evt.target, strings$4.SCRIM_SELECTOR); // Check for scrim click first since it doesn't require querying ancestors.
+
+      if (isScrim && this.scrimClickAction_ !== '') {
+        this.close(this.scrimClickAction_);
+      } else {
+        var action = this.adapter_.getActionFromEvent(evt);
+
+        if (action) {
+          this.close(action);
+        }
+      }
+    };
+    /** Handles keydown on the dialog root element. */
+
+
+    MDCDialogFoundation.prototype.handleKeydown = function (evt) {
+      var isEnter = evt.key === 'Enter' || evt.keyCode === 13;
+
+      if (!isEnter) {
+        return;
+      }
+
+      var action = this.adapter_.getActionFromEvent(evt);
+
+      if (action) {
+        // Action button callback is handled in `handleClick`,
+        // since space/enter keydowns on buttons trigger click events.
+        return;
+      }
+
+      var isDefault = !this.adapter_.eventTargetMatches(evt.target, strings$4.SUPPRESS_DEFAULT_PRESS_SELECTOR);
+
+      if (isEnter && isDefault) {
+        this.adapter_.clickDefaultButton();
+      }
+    };
+    /** Handles keydown on the document. */
+
+
+    MDCDialogFoundation.prototype.handleDocumentKeydown = function (evt) {
+      var isEscape = evt.key === 'Escape' || evt.keyCode === 27;
+
+      if (isEscape && this.escapeKeyAction_ !== '') {
+        this.close(this.escapeKeyAction_);
+      }
+    };
+
+    MDCDialogFoundation.prototype.layoutInternal_ = function () {
+      if (this.autoStackButtons_) {
+        this.detectStackedButtons_();
+      }
+
+      this.detectScrollableContent_();
+    };
+
+    MDCDialogFoundation.prototype.handleAnimationTimerEnd_ = function () {
+      this.animationTimer_ = 0;
+      this.adapter_.removeClass(cssClasses$6.OPENING);
+      this.adapter_.removeClass(cssClasses$6.CLOSING);
+    };
+    /**
+     * Runs the given logic on the next animation frame, using setTimeout to factor in Firefox reflow behavior.
+     */
+
+
+    MDCDialogFoundation.prototype.runNextAnimationFrame_ = function (callback) {
+      var _this = this;
+
+      cancelAnimationFrame(this.animationFrame_);
+      this.animationFrame_ = requestAnimationFrame(function () {
+        _this.animationFrame_ = 0;
+        clearTimeout(_this.animationTimer_);
+        _this.animationTimer_ = setTimeout(callback, 0);
+      });
+    };
+
+    MDCDialogFoundation.prototype.detectStackedButtons_ = function () {
+      // Remove the class first to let us measure the buttons' natural positions.
+      this.adapter_.removeClass(cssClasses$6.STACKED);
+      var areButtonsStacked = this.adapter_.areButtonsStacked();
+
+      if (areButtonsStacked) {
+        this.adapter_.addClass(cssClasses$6.STACKED);
+      }
+
+      if (areButtonsStacked !== this.areButtonsStacked_) {
+        this.adapter_.reverseButtons();
+        this.areButtonsStacked_ = areButtonsStacked;
+      }
+    };
+
+    MDCDialogFoundation.prototype.detectScrollableContent_ = function () {
+      // Remove the class first to let us measure the natural height of the content.
+      this.adapter_.removeClass(cssClasses$6.SCROLLABLE);
+
+      if (this.adapter_.isContentScrollable()) {
+        this.adapter_.addClass(cssClasses$6.SCROLLABLE);
+      }
+    };
+
+    return MDCDialogFoundation;
+  }(MDCFoundation);
+
+  const blockingElements = document.$blockingElements;
+  class DialogBase extends BaseElement {
+    constructor() {
+      super(...arguments);
+      this.hideActions = false;
+      this.stacked = false;
+      this.heading = '';
+      this.scrimClickAction = 'close';
+      this.escapeKeyAction = 'close';
+      this.open = false;
+      this.defaultAction = 'close';
+      this.actionAttribute = 'dialogAction';
+      this.initialFocusAttribute = 'dialogInitialFocus';
+      this.mdcFoundationClass = MDCDialogFoundation;
+      this.boundLayout = null;
+      this.boundHandleClick = null;
+      this.boundHandleKeydown = null;
+      this.boundHandleDocumentKeydown = null;
+    }
+
+    get primaryButton() {
+      let assignedNodes = this.primarySlot.assignedNodes();
+      assignedNodes = assignedNodes.filter(node => node instanceof HTMLElement);
+      const button = assignedNodes[0];
+      return button ? button : null;
+    }
+
+    emitNotification(name, action) {
+      const init = {
+        detail: action ? {
+          action
+        } : {}
+      };
+      const ev = new CustomEvent(name, init);
+      this.dispatchEvent(ev);
+    }
+
+    getInitialFocusEl() {
+      const initFocusSelector = `[${this.initialFocusAttribute}]`; // only search light DOM. This typically handles all the cases
+
+      const lightDomQs = this.querySelector(initFocusSelector);
+
+      if (lightDomQs) {
+        return lightDomQs;
+      } // if not in light dom, search each flattened distributed node.
+
+
+      const primarySlot = this.primarySlot;
+      const primaryNodes = primarySlot.assignedNodes({
+        flatten: true
+      });
+      const primaryFocusElement = this.searchNodeTreesForAttribute(primaryNodes, this.initialFocusAttribute);
+
+      if (primaryFocusElement) {
+        return primaryFocusElement;
+      }
+
+      const secondarySlot = this.secondarySlot;
+      const secondaryNodes = secondarySlot.assignedNodes({
+        flatten: true
+      });
+      const secondaryFocusElement = this.searchNodeTreesForAttribute(secondaryNodes, this.initialFocusAttribute);
+
+      if (secondaryFocusElement) {
+        return secondaryFocusElement;
+      }
+
+      const contentSlot = this.contentSlot;
+      const contentNodes = contentSlot.assignedNodes({
+        flatten: true
+      });
+      const initFocusElement = this.searchNodeTreesForAttribute(contentNodes, this.initialFocusAttribute);
+      return initFocusElement;
+    }
+
+    searchNodeTreesForAttribute(nodes, attribute) {
+      for (const node of nodes) {
+        if (!(node instanceof HTMLElement)) {
+          continue;
+        }
+
+        if (node.hasAttribute(attribute)) {
+          return node;
+        } else {
+          const selection = node.querySelector(`[${attribute}]`);
+
+          if (selection) {
+            return selection;
+          }
+        }
+      }
+
+      return null;
+    }
+
+    createAdapter() {
+      return Object.assign(Object.assign({}, addHasRemoveClass(this.mdcRoot)), {
+        addBodyClass: () => document.body.style.overflow = 'hidden',
+        removeBodyClass: () => document.body.style.overflow = '',
+        areButtonsStacked: () => this.stacked,
+        clickDefaultButton: () => {
+          const primary = this.primaryButton;
+
+          if (primary) {
+            primary.click();
+          }
+        },
+        eventTargetMatches: (target, selector) => target ? matches(target, selector) : false,
+        getActionFromEvent: e => {
+          if (!e.target) {
+            return '';
+          }
+
+          const element = closest(e.target, `[${this.actionAttribute}]`);
+          const action = element && element.getAttribute(this.actionAttribute);
+          return action;
+        },
+        getInitialFocusEl: () => {
+          return this.getInitialFocusEl();
+        },
+        isContentScrollable: () => {
+          const el = this.contentElement;
+          return el ? el.scrollHeight > el.offsetHeight : false;
+        },
+        notifyClosed: action => this.emitNotification('closed', action),
+        notifyClosing: action => {
+          if (!this.closingDueToDisconnect) {
+            // Don't set our open state to closed just because we were
+            // disconnected. That way if we get reconnected, we'll know to
+            // re-open.
+            this.open = false;
+          }
+
+          this.emitNotification('closing', action);
+        },
+        notifyOpened: () => this.emitNotification('opened'),
+        notifyOpening: () => {
+          this.open = true;
+          this.emitNotification('opening');
+        },
+        reverseButtons: () => {},
+        releaseFocus: () => {
+          blockingElements.remove(this);
+        },
+        trapFocus: el => {
+          blockingElements.push(this);
+
+          if (el) {
+            el.focus();
+          }
+        }
+      });
+    }
+
+    render() {
+      const classes = {
+        [cssClasses$6.STACKED]: this.stacked
+      };
+      let heading = html``;
+
+      if (this.heading) {
+        heading = html`
+        <h2 id="title" class="mdc-dialog__title">${this.heading}</h2>`;
+      }
+
+      const actionsClasses = {
+        'mdc-dialog__actions': !this.hideActions
+      };
+      return html`
+    <div class="mdc-dialog ${classMap(classes)}"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="title"
+        aria-describedby="content">
+      <div class="mdc-dialog__container">
+        <div class="mdc-dialog__surface">
+          ${heading}
+          <div id="content" class="mdc-dialog__content">
+            <slot id="contentSlot"></slot>
+          </div>
+          <footer
+              id="actions"
+              class="${classMap(actionsClasses)}">
+            <span>
+              <slot name="secondaryAction"></slot>
+            </span>
+            <span>
+             <slot name="primaryAction"></slot>
+            </span>
+          </footer>
+        </div>
+      </div>
+      <div class="mdc-dialog__scrim"></div>
+    </div>`;
+    }
+
+    firstUpdated() {
+      super.firstUpdated();
+      this.mdcFoundation.setAutoStackButtons(true);
+    }
+
+    connectedCallback() {
+      super.connectedCallback();
+
+      if (this.open && this.mdcFoundation && !this.mdcFoundation.isOpen()) {
+        // We probably got disconnected while we were still open. Re-open,
+        // matching the behavior of native <dialog>.
+        this.setEventListeners();
+        this.mdcFoundation.open();
+      }
+    }
+
+    disconnectedCallback() {
+      super.disconnectedCallback();
+
+      if (this.open && this.mdcFoundation) {
+        // If this dialog is opened and then disconnected, we want to close
+        // the foundation, so that 1) any pending timers are cancelled
+        // (in particular for trapFocus), and 2) if we reconnect, we can open
+        // the foundation again to retrigger animations and focus.
+        this.removeEventListeners();
+        this.closingDueToDisconnect = true;
+        this.mdcFoundation.close(this.currentAction || this.defaultAction);
+        this.closingDueToDisconnect = false;
+        this.currentAction = undefined; // When we close normally, the releaseFocus callback handles removing
+        // ourselves from the blocking elements stack. However, that callback
+        // happens on a delay, and when we are closing due to a disconnect we
+        // need to remove ourselves before the blocking element polyfill's
+        // mutation observer notices and logs a warning, since it's not valid to
+        // be in the blocking elements stack while disconnected.
+
+        blockingElements.remove(this);
+      }
+    }
+
+    forceLayout() {
+      this.mdcFoundation.layout();
+    }
+
+    focus() {
+      const initialFocusEl = this.getInitialFocusEl();
+      initialFocusEl && initialFocusEl.focus();
+    }
+
+    blur() {
+      if (!this.shadowRoot) {
+        return;
+      }
+
+      const activeEl = this.shadowRoot.activeElement;
+
+      if (activeEl) {
+        if (activeEl instanceof HTMLElement) {
+          activeEl.blur();
+        }
+      } else {
+        const root = this.getRootNode();
+        const activeEl = root instanceof Document ? root.activeElement : null;
+
+        if (activeEl instanceof HTMLElement) {
+          activeEl.blur();
+        }
+      }
+    }
+
+    setEventListeners() {
+      this.boundHandleClick = this.mdcFoundation.handleClick.bind(this.mdcFoundation);
+
+      this.boundLayout = () => {
+        if (this.open) {
+          this.mdcFoundation.layout.bind(this.mdcFoundation);
+        }
+      };
+
+      this.boundHandleKeydown = this.mdcFoundation.handleKeydown.bind(this.mdcFoundation);
+      this.boundHandleDocumentKeydown = this.mdcFoundation.handleDocumentKeydown.bind(this.mdcFoundation);
+      this.mdcRoot.addEventListener('click', this.boundHandleClick);
+      window.addEventListener('resize', this.boundLayout, applyPassive());
+      window.addEventListener('orientationchange', this.boundLayout, applyPassive());
+      this.addEventListener('keydown', this.boundHandleKeydown, applyPassive());
+      document.addEventListener('keydown', this.boundHandleDocumentKeydown, applyPassive());
+    }
+
+    removeEventListeners() {
+      if (this.boundHandleClick) {
+        this.mdcRoot.removeEventListener('click', this.boundHandleClick);
+      }
+
+      if (this.boundLayout) {
+        window.removeEventListener('resize', this.boundLayout);
+        window.removeEventListener('orientationchange', this.boundLayout);
+      }
+
+      if (this.boundHandleKeydown) {
+        this.mdcRoot.removeEventListener('keydown', this.boundHandleKeydown);
+      }
+
+      if (this.boundHandleDocumentKeydown) {
+        this.mdcRoot.removeEventListener('keydown', this.boundHandleDocumentKeydown);
+      }
+    }
+
+    close() {
+      this.open = false;
+    }
+
+    show() {
+      this.open = true;
+    }
+
+  }
+
+  __decorate([query('.mdc-dialog')], DialogBase.prototype, "mdcRoot", void 0);
+
+  __decorate([query('slot[name="primaryAction"]')], DialogBase.prototype, "primarySlot", void 0);
+
+  __decorate([query('slot[name="secondaryAction"]')], DialogBase.prototype, "secondarySlot", void 0);
+
+  __decorate([query('#contentSlot')], DialogBase.prototype, "contentSlot", void 0);
+
+  __decorate([query('.mdc-dialog__content')], DialogBase.prototype, "contentElement", void 0);
+
+  __decorate([query('.mdc-container')], DialogBase.prototype, "conatinerElement", void 0);
+
+  __decorate([property({
+    type: Boolean
+  })], DialogBase.prototype, "hideActions", void 0);
+
+  __decorate([property({
+    type: Boolean
+  }), observer(function () {
+    this.forceLayout();
+  })], DialogBase.prototype, "stacked", void 0);
+
+  __decorate([property({
+    type: String
+  })], DialogBase.prototype, "heading", void 0);
+
+  __decorate([property({
+    type: String
+  }), observer(function (newAction) {
+    this.mdcFoundation.setScrimClickAction(newAction);
+  })], DialogBase.prototype, "scrimClickAction", void 0);
+
+  __decorate([property({
+    type: String
+  }), observer(function (newAction) {
+    this.mdcFoundation.setEscapeKeyAction(newAction);
+  })], DialogBase.prototype, "escapeKeyAction", void 0);
+
+  __decorate([property({
+    type: Boolean,
+    reflect: true
+  }), observer(function (isOpen) {
+    // Check isConnected because we could have been disconnected before first
+    // update. If we're now closed, then we shouldn't start the MDC foundation
+    // opening animation. If we're now closed, then we've already closed the
+    // foundation in disconnectedCallback.
+    if (this.mdcFoundation && this.isConnected) {
+      if (isOpen) {
+        this.setEventListeners();
+        this.mdcFoundation.open();
+      } else {
+        this.removeEventListeners();
+        this.mdcFoundation.close(this.currentAction || this.defaultAction);
+        this.currentAction = undefined;
+      }
+    }
+  })], DialogBase.prototype, "open", void 0);
+
+  __decorate([property()], DialogBase.prototype, "defaultAction", void 0);
+
+  __decorate([property()], DialogBase.prototype, "actionAttribute", void 0);
+
+  __decorate([property()], DialogBase.prototype, "initialFocusAttribute", void 0);
+
+  /**
+  @license
+  Copyright 2018 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  */
+  const style$5 = css`.mdc-elevation-overlay{position:absolute;border-radius:inherit;opacity:0;pointer-events:none;transition:opacity 280ms cubic-bezier(0.4, 0, 0.2, 1);background-color:#fff}.mdc-dialog,.mdc-dialog__scrim{position:fixed;top:0;left:0;align-items:center;justify-content:center;box-sizing:border-box;width:100%;height:100%}.mdc-dialog{display:none;z-index:7}.mdc-dialog .mdc-dialog__surface{background-color:#fff;background-color:var(--mdc-theme-surface, #fff)}.mdc-dialog .mdc-dialog__scrim{background-color:rgba(0,0,0,.32)}.mdc-dialog .mdc-dialog__title{color:rgba(0,0,0,.87)}.mdc-dialog .mdc-dialog__content{color:rgba(0,0,0,.6)}.mdc-dialog.mdc-dialog--scrollable .mdc-dialog__title,.mdc-dialog.mdc-dialog--scrollable .mdc-dialog__actions{border-color:rgba(0,0,0,.12)}.mdc-dialog .mdc-dialog__surface{min-width:280px}@media(max-width: 592px){.mdc-dialog .mdc-dialog__surface{max-width:calc(100vw - 32px)}}@media(min-width: 592px){.mdc-dialog .mdc-dialog__surface{max-width:560px}}.mdc-dialog .mdc-dialog__surface{max-height:calc(100% - 32px)}.mdc-dialog .mdc-dialog__surface{border-radius:4px}.mdc-dialog__scrim{opacity:0;z-index:-1}.mdc-dialog__container{display:flex;flex-direction:row;align-items:center;justify-content:space-around;box-sizing:border-box;height:100%;transform:scale(0.8);opacity:0;pointer-events:none}.mdc-dialog__surface{position:relative;box-shadow:0px 11px 15px -7px rgba(0, 0, 0, 0.2),0px 24px 38px 3px rgba(0, 0, 0, 0.14),0px 9px 46px 8px rgba(0,0,0,.12);display:flex;flex-direction:column;flex-grow:0;flex-shrink:0;box-sizing:border-box;max-width:100%;max-height:100%;pointer-events:auto;overflow-y:auto}.mdc-dialog__surface .mdc-elevation-overlay{width:100%;height:100%;top:0;left:0}.mdc-dialog[dir=rtl] .mdc-dialog__surface,[dir=rtl] .mdc-dialog .mdc-dialog__surface{text-align:right}.mdc-dialog__title{display:block;margin-top:0;line-height:normal;font-family:Roboto, sans-serif;-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased;font-size:1.25rem;line-height:2rem;font-weight:500;letter-spacing:.0125em;text-decoration:inherit;text-transform:inherit;display:block;position:relative;flex-shrink:0;box-sizing:border-box;margin:0;padding:0 24px 9px;border-bottom:1px solid transparent}.mdc-dialog__title::before{display:inline-block;width:0;height:40px;content:"";vertical-align:0}.mdc-dialog[dir=rtl] .mdc-dialog__title,[dir=rtl] .mdc-dialog .mdc-dialog__title{text-align:right}.mdc-dialog--scrollable .mdc-dialog__title{padding-bottom:15px}.mdc-dialog__content{font-family:Roboto, sans-serif;-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased;font-size:1rem;line-height:1.5rem;font-weight:400;letter-spacing:.03125em;text-decoration:inherit;text-transform:inherit;flex-grow:1;box-sizing:border-box;margin:0;padding:20px 24px;overflow:auto;-webkit-overflow-scrolling:touch}.mdc-dialog__content>:first-child{margin-top:0}.mdc-dialog__content>:last-child{margin-bottom:0}.mdc-dialog__title+.mdc-dialog__content{padding-top:0}.mdc-dialog--scrollable .mdc-dialog__content{padding-top:8px;padding-bottom:8px}.mdc-dialog__content .mdc-list:first-child:last-child{padding:6px 0 0}.mdc-dialog--scrollable .mdc-dialog__content .mdc-list:first-child:last-child{padding:0}.mdc-dialog__actions{display:flex;position:relative;flex-shrink:0;flex-wrap:wrap;align-items:center;justify-content:flex-end;box-sizing:border-box;min-height:52px;margin:0;padding:8px;border-top:1px solid transparent}.mdc-dialog--stacked .mdc-dialog__actions{flex-direction:column;align-items:flex-end}.mdc-dialog__button{margin-left:8px;margin-right:0;max-width:100%;text-align:right}[dir=rtl] .mdc-dialog__button,.mdc-dialog__button[dir=rtl]{margin-left:0;margin-right:8px}.mdc-dialog__button:first-child{margin-left:0;margin-right:0}[dir=rtl] .mdc-dialog__button:first-child,.mdc-dialog__button:first-child[dir=rtl]{margin-left:0;margin-right:0}.mdc-dialog[dir=rtl] .mdc-dialog__button,[dir=rtl] .mdc-dialog .mdc-dialog__button{text-align:left}.mdc-dialog--stacked .mdc-dialog__button:not(:first-child){margin-top:12px}.mdc-dialog--open,.mdc-dialog--opening,.mdc-dialog--closing{display:flex}.mdc-dialog--opening .mdc-dialog__scrim{transition:opacity 150ms linear}.mdc-dialog--opening .mdc-dialog__container{transition:opacity 75ms linear,transform 150ms 0ms cubic-bezier(0, 0, 0.2, 1)}.mdc-dialog--closing .mdc-dialog__scrim,.mdc-dialog--closing .mdc-dialog__container{transition:opacity 75ms linear}.mdc-dialog--closing .mdc-dialog__container{transform:scale(1)}.mdc-dialog--open .mdc-dialog__scrim{opacity:1}.mdc-dialog--open .mdc-dialog__container{transform:scale(1);opacity:1}.mdc-dialog-scroll-lock{overflow:hidden}#actions:not(.mdc-dialog__actions){display:none}@media(min-width: 560px){.mdc-dialog .mdc-dialog__surface{max-width:560px;max-width:var(--mdc-dialog-max-width, 560px)}}.mdc-dialog .mdc-dialog__scrim{background-color:rgba(0,0,0,.32);background-color:var(--mdc-dialog-scrim-color, rgba(0, 0, 0, 0.32))}.mdc-dialog .mdc-dialog__title{color:rgba(0,0,0,.87);color:var(--mdc-dialog-heading-ink-color, rgba(0, 0, 0, 0.87))}.mdc-dialog .mdc-dialog__content{color:rgba(0,0,0,.6);color:var(--mdc-dialog-content-ink-color, rgba(0, 0, 0, 0.6))}.mdc-dialog.mdc-dialog--scrollable .mdc-dialog__title,.mdc-dialog.mdc-dialog--scrollable .mdc-dialog__actions{border-color:rgba(0,0,0,.12);border-color:var(--mdc-dialog-scroll-divider-color, rgba(0, 0, 0, 0.12))}.mdc-dialog .mdc-dialog__surface{min-width:280px;min-width:var(--mdc-dialog-min-width, 280px)}.mdc-dialog .mdc-dialog__surface{max-height:var(--mdc-dialog-max-height, calc(100% - 32px));border-radius:4px;border-radius:var(--mdc-dialog-shape-radius, 4px)}#actions ::slotted(*){margin-left:8px;margin-right:0;max-width:100%;text-align:right}[dir=rtl] #actions ::slotted(*),#actions ::slotted(*)[dir=rtl]{margin-left:0;margin-right:8px}.mdc-dialog[dir=rtl] #actions ::slotted(*),[dir=rtl] .mdc-dialog #actions ::slotted(*){text-align:left}.mdc-dialog--stacked #actions{flex-direction:column-reverse}.mdc-dialog--stacked #actions *:not(:last-child) ::slotted(*){flex-basis:1e-9px;margin-top:12px}`;
+
+  let Dialog = class Dialog extends DialogBase {};
+  Dialog.styles = style$5;
+  Dialog = __decorate([customElement('mwc-dialog')], Dialog);
+
+  /**
+   * @license
+   * Copyright 2016 Google Inc.
+   *
+   * Permission is hereby granted, free of charge, to any person obtaining a copy
+   * of this software and associated documentation files (the "Software"), to deal
+   * in the Software without restriction, including without limitation the rights
+   * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   * copies of the Software, and to permit persons to whom the Software is
+   * furnished to do so, subject to the following conditions:
+   *
+   * The above copyright notice and this permission notice shall be included in
+   * all copies or substantial portions of the Software.
+   *
+   * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   * THE SOFTWARE.
+   */
+  var cssPropertyNameMap = {
+    animation: {
+      prefixed: '-webkit-animation',
+      standard: 'animation'
+    },
+    transform: {
+      prefixed: '-webkit-transform',
+      standard: 'transform'
+    },
+    transition: {
+      prefixed: '-webkit-transition',
+      standard: 'transition'
+    }
+  };
+  var jsEventTypeMap = {
+    animationend: {
+      cssProperty: 'animation',
+      prefixed: 'webkitAnimationEnd',
+      standard: 'animationend'
+    },
+    animationiteration: {
+      cssProperty: 'animation',
+      prefixed: 'webkitAnimationIteration',
+      standard: 'animationiteration'
+    },
+    animationstart: {
+      cssProperty: 'animation',
+      prefixed: 'webkitAnimationStart',
+      standard: 'animationstart'
+    },
+    transitionend: {
+      cssProperty: 'transition',
+      prefixed: 'webkitTransitionEnd',
+      standard: 'transitionend'
+    }
+  };
+
+  function isWindow(windowObj) {
+    return Boolean(windowObj.document) && typeof windowObj.document.createElement === 'function';
+  }
+
+  function getCorrectPropertyName(windowObj, cssProperty) {
+    if (isWindow(windowObj) && cssProperty in cssPropertyNameMap) {
+      var el = windowObj.document.createElement('div');
+      var _a = cssPropertyNameMap[cssProperty],
+          standard = _a.standard,
+          prefixed = _a.prefixed;
+      var isStandard = standard in el.style;
+      return isStandard ? standard : prefixed;
+    }
+
+    return cssProperty;
+  }
+  function getCorrectEventName(windowObj, eventType) {
+    if (isWindow(windowObj) && eventType in jsEventTypeMap) {
+      var el = windowObj.document.createElement('div');
+      var _a = jsEventTypeMap[eventType],
+          standard = _a.standard,
+          prefixed = _a.prefixed,
+          cssProperty = _a.cssProperty;
+      var isStandard = cssProperty in el.style;
+      return isStandard ? standard : prefixed;
+    }
+
+    return eventType;
+  }
+
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   *
+   * Permission is hereby granted, free of charge, to any person obtaining a copy
+   * of this software and associated documentation files (the "Software"), to deal
+   * in the Software without restriction, including without limitation the rights
+   * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   * copies of the Software, and to permit persons to whom the Software is
+   * furnished to do so, subject to the following conditions:
+   *
+   * The above copyright notice and this permission notice shall be included in
+   * all copies or substantial portions of the Software.
+   *
+   * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   * THE SOFTWARE.
+   */
+  var cssClasses$7 = {
+    ACTIVE: 'mdc-slider--active',
+    DISABLED: 'mdc-slider--disabled',
+    DISCRETE: 'mdc-slider--discrete',
+    FOCUS: 'mdc-slider--focus',
+    HAS_TRACK_MARKER: 'mdc-slider--display-markers',
+    IN_TRANSIT: 'mdc-slider--in-transit',
+    IS_DISCRETE: 'mdc-slider--discrete'
+  };
+  var strings$5 = {
+    ARIA_DISABLED: 'aria-disabled',
+    ARIA_VALUEMAX: 'aria-valuemax',
+    ARIA_VALUEMIN: 'aria-valuemin',
+    ARIA_VALUENOW: 'aria-valuenow',
+    CHANGE_EVENT: 'MDCSlider:change',
+    INPUT_EVENT: 'MDCSlider:input',
+    PIN_VALUE_MARKER_SELECTOR: '.mdc-slider__pin-value-marker',
+    STEP_DATA_ATTR: 'data-step',
+    THUMB_CONTAINER_SELECTOR: '.mdc-slider__thumb-container',
+    TRACK_MARKER_CONTAINER_SELECTOR: '.mdc-slider__track-marker-container',
+    TRACK_SELECTOR: '.mdc-slider__track'
+  };
+  var numbers$4 = {
+    PAGE_FACTOR: 4
+  };
+
+  /**
+   * @license
+   * Copyright 2017 Google Inc.
+   *
+   * Permission is hereby granted, free of charge, to any person obtaining a copy
+   * of this software and associated documentation files (the "Software"), to deal
+   * in the Software without restriction, including without limitation the rights
+   * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   * copies of the Software, and to permit persons to whom the Software is
+   * furnished to do so, subject to the following conditions:
+   *
+   * The above copyright notice and this permission notice shall be included in
+   * all copies or substantial portions of the Software.
+   *
+   * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   * THE SOFTWARE.
+   */
+  var DOWN_EVENTS = ['mousedown', 'pointerdown', 'touchstart'];
+  var UP_EVENTS = ['mouseup', 'pointerup', 'touchend'];
+  var MOVE_EVENT_MAP = {
+    mousedown: 'mousemove',
+    pointerdown: 'pointermove',
+    touchstart: 'touchmove'
+  };
+  var KEY_IDS = {
+    ARROW_DOWN: 'ArrowDown',
+    ARROW_LEFT: 'ArrowLeft',
+    ARROW_RIGHT: 'ArrowRight',
+    ARROW_UP: 'ArrowUp',
+    END: 'End',
+    HOME: 'Home',
+    PAGE_DOWN: 'PageDown',
+    PAGE_UP: 'PageUp'
+  };
+
+  var MDCSliderFoundation =
+  /** @class */
+  function (_super) {
+    __extends(MDCSliderFoundation, _super);
+
+    function MDCSliderFoundation(adapter) {
+      var _this = _super.call(this, __assign({}, MDCSliderFoundation.defaultAdapter, adapter)) || this;
+      /**
+       * We set this to NaN since we want it to be a number, but we can't use '0' or '-1'
+       * because those could be valid tabindices set by the client code.
+       */
+
+
+      _this.savedTabIndex_ = NaN;
+      _this.active_ = false;
+      _this.inTransit_ = false;
+      _this.isDiscrete_ = false;
+      _this.hasTrackMarker_ = false;
+      _this.handlingThumbTargetEvt_ = false;
+      _this.min_ = 0;
+      _this.max_ = 100;
+      _this.step_ = 0;
+      _this.value_ = 0;
+      _this.disabled_ = false;
+      _this.preventFocusState_ = false;
+
+      _this.thumbContainerPointerHandler_ = function () {
+        return _this.handlingThumbTargetEvt_ = true;
+      };
+
+      _this.interactionStartHandler_ = function (evt) {
+        return _this.handleDown_(evt);
+      };
+
+      _this.keydownHandler_ = function (evt) {
+        return _this.handleKeydown_(evt);
+      };
+
+      _this.focusHandler_ = function () {
+        return _this.handleFocus_();
+      };
+
+      _this.blurHandler_ = function () {
+        return _this.handleBlur_();
+      };
+
+      _this.resizeHandler_ = function () {
+        return _this.layout();
+      };
+
+      return _this;
+    }
+
+    Object.defineProperty(MDCSliderFoundation, "cssClasses", {
+      get: function () {
+        return cssClasses$7;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCSliderFoundation, "strings", {
+      get: function () {
+        return strings$5;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCSliderFoundation, "numbers", {
+      get: function () {
+        return numbers$4;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(MDCSliderFoundation, "defaultAdapter", {
+      get: function () {
+        // tslint:disable:object-literal-sort-keys Methods should be in the same order as the adapter interface.
+        return {
+          hasClass: function () {
+            return false;
+          },
+          addClass: function () {
+            return undefined;
+          },
+          removeClass: function () {
+            return undefined;
+          },
+          getAttribute: function () {
+            return null;
+          },
+          setAttribute: function () {
+            return undefined;
+          },
+          removeAttribute: function () {
+            return undefined;
+          },
+          computeBoundingRect: function () {
+            return {
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: 0,
+              width: 0,
+              height: 0
+            };
+          },
+          getTabIndex: function () {
+            return 0;
+          },
+          registerInteractionHandler: function () {
+            return undefined;
+          },
+          deregisterInteractionHandler: function () {
+            return undefined;
+          },
+          registerThumbContainerInteractionHandler: function () {
+            return undefined;
+          },
+          deregisterThumbContainerInteractionHandler: function () {
+            return undefined;
+          },
+          registerBodyInteractionHandler: function () {
+            return undefined;
+          },
+          deregisterBodyInteractionHandler: function () {
+            return undefined;
+          },
+          registerResizeHandler: function () {
+            return undefined;
+          },
+          deregisterResizeHandler: function () {
+            return undefined;
+          },
+          notifyInput: function () {
+            return undefined;
+          },
+          notifyChange: function () {
+            return undefined;
+          },
+          setThumbContainerStyleProperty: function () {
+            return undefined;
+          },
+          setTrackStyleProperty: function () {
+            return undefined;
+          },
+          setMarkerValue: function () {
+            return undefined;
+          },
+          setTrackMarkers: function () {
+            return undefined;
+          },
+          isRTL: function () {
+            return false;
+          }
+        }; // tslint:enable:object-literal-sort-keys
+      },
+      enumerable: true,
+      configurable: true
+    });
+
+    MDCSliderFoundation.prototype.init = function () {
+      var _this = this;
+
+      this.isDiscrete_ = this.adapter_.hasClass(cssClasses$7.IS_DISCRETE);
+      this.hasTrackMarker_ = this.adapter_.hasClass(cssClasses$7.HAS_TRACK_MARKER);
+      DOWN_EVENTS.forEach(function (evtName) {
+        _this.adapter_.registerInteractionHandler(evtName, _this.interactionStartHandler_);
+
+        _this.adapter_.registerThumbContainerInteractionHandler(evtName, _this.thumbContainerPointerHandler_);
+      });
+      this.adapter_.registerInteractionHandler('keydown', this.keydownHandler_);
+      this.adapter_.registerInteractionHandler('focus', this.focusHandler_);
+      this.adapter_.registerInteractionHandler('blur', this.blurHandler_);
+      this.adapter_.registerResizeHandler(this.resizeHandler_);
+      this.layout(); // At last step, provide a reasonable default value to discrete slider
+
+      if (this.isDiscrete_ && this.getStep() === 0) {
+        this.step_ = 1;
+      }
+    };
+
+    MDCSliderFoundation.prototype.destroy = function () {
+      var _this = this;
+
+      DOWN_EVENTS.forEach(function (evtName) {
+        _this.adapter_.deregisterInteractionHandler(evtName, _this.interactionStartHandler_);
+
+        _this.adapter_.deregisterThumbContainerInteractionHandler(evtName, _this.thumbContainerPointerHandler_);
+      });
+      this.adapter_.deregisterInteractionHandler('keydown', this.keydownHandler_);
+      this.adapter_.deregisterInteractionHandler('focus', this.focusHandler_);
+      this.adapter_.deregisterInteractionHandler('blur', this.blurHandler_);
+      this.adapter_.deregisterResizeHandler(this.resizeHandler_);
+    };
+
+    MDCSliderFoundation.prototype.setupTrackMarker = function () {
+      if (this.isDiscrete_ && this.hasTrackMarker_ && this.getStep() !== 0) {
+        this.adapter_.setTrackMarkers(this.getStep(), this.getMax(), this.getMin());
+      }
+    };
+
+    MDCSliderFoundation.prototype.layout = function () {
+      this.rect_ = this.adapter_.computeBoundingRect();
+      this.updateUIForCurrentValue_();
+    };
+
+    MDCSliderFoundation.prototype.getValue = function () {
+      return this.value_;
+    };
+
+    MDCSliderFoundation.prototype.setValue = function (value) {
+      this.setValue_(value, false);
+    };
+
+    MDCSliderFoundation.prototype.getMax = function () {
+      return this.max_;
+    };
+
+    MDCSliderFoundation.prototype.setMax = function (max) {
+      if (max < this.min_) {
+        throw new Error('Cannot set max to be less than the slider\'s minimum value');
+      }
+
+      this.max_ = max;
+      this.setValue_(this.value_, false, true);
+      this.adapter_.setAttribute(strings$5.ARIA_VALUEMAX, String(this.max_));
+      this.setupTrackMarker();
+    };
+
+    MDCSliderFoundation.prototype.getMin = function () {
+      return this.min_;
+    };
+
+    MDCSliderFoundation.prototype.setMin = function (min) {
+      if (min > this.max_) {
+        throw new Error('Cannot set min to be greater than the slider\'s maximum value');
+      }
+
+      this.min_ = min;
+      this.setValue_(this.value_, false, true);
+      this.adapter_.setAttribute(strings$5.ARIA_VALUEMIN, String(this.min_));
+      this.setupTrackMarker();
+    };
+
+    MDCSliderFoundation.prototype.getStep = function () {
+      return this.step_;
+    };
+
+    MDCSliderFoundation.prototype.setStep = function (step) {
+      if (step < 0) {
+        throw new Error('Step cannot be set to a negative number');
+      }
+
+      if (this.isDiscrete_ && (typeof step !== 'number' || step < 1)) {
+        step = 1;
+      }
+
+      this.step_ = step;
+      this.setValue_(this.value_, false, true);
+      this.setupTrackMarker();
+    };
+
+    MDCSliderFoundation.prototype.isDisabled = function () {
+      return this.disabled_;
+    };
+
+    MDCSliderFoundation.prototype.setDisabled = function (disabled) {
+      this.disabled_ = disabled;
+      this.toggleClass_(cssClasses$7.DISABLED, this.disabled_);
+
+      if (this.disabled_) {
+        this.savedTabIndex_ = this.adapter_.getTabIndex();
+        this.adapter_.setAttribute(strings$5.ARIA_DISABLED, 'true');
+        this.adapter_.removeAttribute('tabindex');
+      } else {
+        this.adapter_.removeAttribute(strings$5.ARIA_DISABLED);
+
+        if (!isNaN(this.savedTabIndex_)) {
+          this.adapter_.setAttribute('tabindex', String(this.savedTabIndex_));
+        }
+      }
+    };
+    /**
+     * Called when the user starts interacting with the slider
+     */
+
+
+    MDCSliderFoundation.prototype.handleDown_ = function (downEvent) {
+      var _this = this;
+
+      if (this.disabled_) {
+        return;
+      }
+
+      this.preventFocusState_ = true;
+      this.setInTransit_(!this.handlingThumbTargetEvt_);
+      this.handlingThumbTargetEvt_ = false;
+      this.setActive_(true);
+
+      var moveHandler = function (moveEvent) {
+        _this.handleMove_(moveEvent);
+      };
+
+      var moveEventType = MOVE_EVENT_MAP[downEvent.type]; // Note: upHandler is [de]registered on ALL potential pointer-related release event types, since some browsers
+      // do not always fire these consistently in pairs.
+      // (See https://github.com/material-components/material-components-web/issues/1192)
+
+      var upHandler = function () {
+        _this.handleUp_();
+
+        _this.adapter_.deregisterBodyInteractionHandler(moveEventType, moveHandler);
+
+        UP_EVENTS.forEach(function (evtName) {
+          return _this.adapter_.deregisterBodyInteractionHandler(evtName, upHandler);
+        });
+      };
+
+      this.adapter_.registerBodyInteractionHandler(moveEventType, moveHandler);
+      UP_EVENTS.forEach(function (evtName) {
+        return _this.adapter_.registerBodyInteractionHandler(evtName, upHandler);
+      });
+      this.setValueFromEvt_(downEvent);
+    };
+    /**
+     * Called when the user moves the slider
+     */
+
+
+    MDCSliderFoundation.prototype.handleMove_ = function (evt) {
+      evt.preventDefault();
+      this.setValueFromEvt_(evt);
+    };
+    /**
+     * Called when the user's interaction with the slider ends
+     */
+
+
+    MDCSliderFoundation.prototype.handleUp_ = function () {
+      this.setActive_(false);
+      this.adapter_.notifyChange();
+    };
+    /**
+     * Returns the pageX of the event
+     */
+
+
+    MDCSliderFoundation.prototype.getPageX_ = function (evt) {
+      if (evt.targetTouches && evt.targetTouches.length > 0) {
+        return evt.targetTouches[0].pageX;
+      }
+
+      return evt.pageX;
+    };
+    /**
+     * Sets the slider value from an event
+     */
+
+
+    MDCSliderFoundation.prototype.setValueFromEvt_ = function (evt) {
+      var pageX = this.getPageX_(evt);
+      var value = this.computeValueFromPageX_(pageX);
+      this.setValue_(value, true);
+    };
+    /**
+     * Computes the new value from the pageX position
+     */
+
+
+    MDCSliderFoundation.prototype.computeValueFromPageX_ = function (pageX) {
+      var _a = this,
+          max = _a.max_,
+          min = _a.min_;
+
+      var xPos = pageX - this.rect_.left;
+      var pctComplete = xPos / this.rect_.width;
+
+      if (this.adapter_.isRTL()) {
+        pctComplete = 1 - pctComplete;
+      } // Fit the percentage complete between the range [min,max]
+      // by remapping from [0, 1] to [min, min+(max-min)].
+
+
+      return min + pctComplete * (max - min);
+    };
+    /**
+     * Handles keydown events
+     */
+
+
+    MDCSliderFoundation.prototype.handleKeydown_ = function (evt) {
+      var keyId = this.getKeyId_(evt);
+      var value = this.getValueForKeyId_(keyId);
+
+      if (isNaN(value)) {
+        return;
+      } // Prevent page from scrolling due to key presses that would normally scroll the page
+
+
+      evt.preventDefault();
+      this.adapter_.addClass(cssClasses$7.FOCUS);
+      this.setValue_(value, true);
+      this.adapter_.notifyChange();
+    };
+    /**
+     * Returns the computed name of the event
+     */
+
+
+    MDCSliderFoundation.prototype.getKeyId_ = function (kbdEvt) {
+      if (kbdEvt.key === KEY_IDS.ARROW_LEFT || kbdEvt.keyCode === 37) {
+        return KEY_IDS.ARROW_LEFT;
+      }
+
+      if (kbdEvt.key === KEY_IDS.ARROW_RIGHT || kbdEvt.keyCode === 39) {
+        return KEY_IDS.ARROW_RIGHT;
+      }
+
+      if (kbdEvt.key === KEY_IDS.ARROW_UP || kbdEvt.keyCode === 38) {
+        return KEY_IDS.ARROW_UP;
+      }
+
+      if (kbdEvt.key === KEY_IDS.ARROW_DOWN || kbdEvt.keyCode === 40) {
+        return KEY_IDS.ARROW_DOWN;
+      }
+
+      if (kbdEvt.key === KEY_IDS.HOME || kbdEvt.keyCode === 36) {
+        return KEY_IDS.HOME;
+      }
+
+      if (kbdEvt.key === KEY_IDS.END || kbdEvt.keyCode === 35) {
+        return KEY_IDS.END;
+      }
+
+      if (kbdEvt.key === KEY_IDS.PAGE_UP || kbdEvt.keyCode === 33) {
+        return KEY_IDS.PAGE_UP;
+      }
+
+      if (kbdEvt.key === KEY_IDS.PAGE_DOWN || kbdEvt.keyCode === 34) {
+        return KEY_IDS.PAGE_DOWN;
+      }
+
+      return '';
+    };
+    /**
+     * Computes the value given a keyboard key ID
+     */
+
+
+    MDCSliderFoundation.prototype.getValueForKeyId_ = function (keyId) {
+      var _a = this,
+          max = _a.max_,
+          min = _a.min_,
+          step = _a.step_;
+
+      var delta = step || (max - min) / 100;
+      var valueNeedsToBeFlipped = this.adapter_.isRTL() && (keyId === KEY_IDS.ARROW_LEFT || keyId === KEY_IDS.ARROW_RIGHT);
+
+      if (valueNeedsToBeFlipped) {
+        delta = -delta;
+      }
+
+      switch (keyId) {
+        case KEY_IDS.ARROW_LEFT:
+        case KEY_IDS.ARROW_DOWN:
+          return this.value_ - delta;
+
+        case KEY_IDS.ARROW_RIGHT:
+        case KEY_IDS.ARROW_UP:
+          return this.value_ + delta;
+
+        case KEY_IDS.HOME:
+          return this.min_;
+
+        case KEY_IDS.END:
+          return this.max_;
+
+        case KEY_IDS.PAGE_UP:
+          return this.value_ + delta * numbers$4.PAGE_FACTOR;
+
+        case KEY_IDS.PAGE_DOWN:
+          return this.value_ - delta * numbers$4.PAGE_FACTOR;
+
+        default:
+          return NaN;
+      }
+    };
+
+    MDCSliderFoundation.prototype.handleFocus_ = function () {
+      if (this.preventFocusState_) {
+        return;
+      }
+
+      this.adapter_.addClass(cssClasses$7.FOCUS);
+    };
+
+    MDCSliderFoundation.prototype.handleBlur_ = function () {
+      this.preventFocusState_ = false;
+      this.adapter_.removeClass(cssClasses$7.FOCUS);
+    };
+    /**
+     * Sets the value of the slider
+     */
+
+
+    MDCSliderFoundation.prototype.setValue_ = function (value, shouldFireInput, force) {
+      if (force === void 0) {
+        force = false;
+      }
+
+      if (value === this.value_ && !force) {
+        return;
+      }
+
+      var _a = this,
+          min = _a.min_,
+          max = _a.max_;
+
+      var valueSetToBoundary = value === min || value === max;
+
+      if (this.step_ && !valueSetToBoundary) {
+        value = this.quantize_(value);
+      }
+
+      if (value < min) {
+        value = min;
+      } else if (value > max) {
+        value = max;
+      }
+
+      this.value_ = value;
+      this.adapter_.setAttribute(strings$5.ARIA_VALUENOW, String(this.value_));
+      this.updateUIForCurrentValue_();
+
+      if (shouldFireInput) {
+        this.adapter_.notifyInput();
+
+        if (this.isDiscrete_) {
+          this.adapter_.setMarkerValue(value);
+        }
+      }
+    };
+    /**
+     * Calculates the quantized value
+     */
+
+
+    MDCSliderFoundation.prototype.quantize_ = function (value) {
+      var numSteps = Math.round(value / this.step_);
+      return numSteps * this.step_;
+    };
+
+    MDCSliderFoundation.prototype.updateUIForCurrentValue_ = function () {
+      var _this = this;
+
+      var _a = this,
+          max = _a.max_,
+          min = _a.min_,
+          value = _a.value_;
+
+      var pctComplete = (value - min) / (max - min);
+      var translatePx = pctComplete * this.rect_.width;
+
+      if (this.adapter_.isRTL()) {
+        translatePx = this.rect_.width - translatePx;
+      }
+
+      var transformProp = getCorrectPropertyName(window, 'transform');
+      var transitionendEvtName = getCorrectEventName(window, 'transitionend');
+
+      if (this.inTransit_) {
+        var onTransitionEnd_1 = function () {
+          _this.setInTransit_(false);
+
+          _this.adapter_.deregisterThumbContainerInteractionHandler(transitionendEvtName, onTransitionEnd_1);
+        };
+
+        this.adapter_.registerThumbContainerInteractionHandler(transitionendEvtName, onTransitionEnd_1);
+      }
+
+      requestAnimationFrame(function () {
+        // NOTE(traviskaufman): It would be nice to use calc() here,
+        // but IE cannot handle calcs in transforms correctly.
+        // See: https://goo.gl/NC2itk
+        // Also note that the -50% offset is used to center the slider thumb.
+        _this.adapter_.setThumbContainerStyleProperty(transformProp, "translateX(" + translatePx + "px) translateX(-50%)");
+
+        _this.adapter_.setTrackStyleProperty(transformProp, "scaleX(" + pctComplete + ")");
+      });
+    };
+    /**
+     * Toggles the active state of the slider
+     */
+
+
+    MDCSliderFoundation.prototype.setActive_ = function (active) {
+      this.active_ = active;
+      this.toggleClass_(cssClasses$7.ACTIVE, this.active_);
+    };
+    /**
+     * Toggles the inTransit state of the slider
+     */
+
+
+    MDCSliderFoundation.prototype.setInTransit_ = function (inTransit) {
+      this.inTransit_ = inTransit;
+      this.toggleClass_(cssClasses$7.IN_TRANSIT, this.inTransit_);
+    };
+    /**
+     * Conditionally adds or removes a class based on shouldBePresent
+     */
+
+
+    MDCSliderFoundation.prototype.toggleClass_ = function (className, shouldBePresent) {
+      if (shouldBePresent) {
+        this.adapter_.addClass(className);
+      } else {
+        this.adapter_.removeClass(className);
+      }
+    };
+
+    return MDCSliderFoundation;
+  }(MDCFoundation);
+
+  /**
+   * @license
+   * Copyright (c) 2018 The Polymer Project Authors. All rights reserved.
+   * This code may only be used under the BSD style license found at
+   * http://polymer.github.io/LICENSE.txt
+   * The complete set of authors may be found at
+   * http://polymer.github.io/AUTHORS.txt
+   * The complete set of contributors may be found at
+   * http://polymer.github.io/CONTRIBUTORS.txt
+   * Code distributed by Google as part of the polymer project is also
+   * subject to an additional IP rights grant found at
+   * http://polymer.github.io/PATENTS.txt
+   */
+  /**
+   * Stores the StyleInfo object applied to a given AttributePart.
+   * Used to unset existing values when a new StyleInfo object is applied.
+   */
+
+  const styleMapCache = new WeakMap();
+  /**
+   * A directive that applies CSS properties to an element.
+   *
+   * `styleMap` can only be used in the `style` attribute and must be the only
+   * expression in the attribute. It takes the property names in the `styleInfo`
+   * object and adds the property values as CSS propertes. Property names with
+   * dashes (`-`) are assumed to be valid CSS property names and set on the
+   * element's style object using `setProperty()`. Names without dashes are
+   * assumed to be camelCased JavaScript property names and set on the element's
+   * style object using property assignment, allowing the style object to
+   * translate JavaScript-style names to CSS property names.
+   *
+   * For example `styleMap({backgroundColor: 'red', 'border-top': '5px', '--size':
+   * '0'})` sets the `background-color`, `border-top` and `--size` properties.
+   *
+   * @param styleInfo {StyleInfo}
+   */
+
+  const styleMap = directive(styleInfo => part => {
+    if (!(part instanceof AttributePart) || part instanceof PropertyPart || part.committer.name !== 'style' || part.committer.parts.length > 1) {
+      throw new Error('The `styleMap` directive must be used in the style attribute ' + 'and must be the only part in the attribute.');
+    }
+
+    const {
+      committer
+    } = part;
+    const {
+      style
+    } = committer.element; // Handle static styles the first time we see a Part
+
+    if (!styleMapCache.has(part)) {
+      style.cssText = committer.strings.join(' ');
+    } // Remove old properties that no longer exist in styleInfo
+
+
+    const oldInfo = styleMapCache.get(part);
+
+    for (const name in oldInfo) {
+      if (!(name in styleInfo)) {
+        if (name.indexOf('-') === -1) {
+          // tslint:disable-next-line:no-any
+          style[name] = null;
+        } else {
+          style.removeProperty(name);
+        }
+      }
+    } // Add or update properties
+
+
+    for (const name in styleInfo) {
+      if (name.indexOf('-') === -1) {
+        // tslint:disable-next-line:no-any
+        style[name] = styleInfo[name];
+      } else {
+        style.setProperty(name, styleInfo[name]);
+      }
+    }
+
+    styleMapCache.set(part, styleInfo);
+  });
+
+  const INPUT_EVENT = 'input';
+  const CHANGE_EVENT = 'change';
+  class SliderBase extends FormElement {
+    constructor() {
+      super(...arguments);
+      this.mdcFoundationClass = MDCSliderFoundation;
+      this.value = 0;
+      this.min = 0;
+      this.max = 100;
+      this.step = 0;
+      this.disabled = false;
+      this.pin = false;
+      this.markers = false;
+      this.pinMarkerText = '';
+      this.trackMarkerContainerStyles = {};
+      this.thumbContainerStyles = {};
+      this.trackStyles = {};
+      this.isFoundationDestroyed = false;
+    } // TODO(sorvell) #css: needs a default width
+
+
+    render() {
+      const isDiscrete = this.step !== 0;
+      const hostClassInfo = {
+        'mdc-slider--discrete': isDiscrete,
+        'mdc-slider--display-markers': this.markers && isDiscrete
+      };
+      let markersTemplate = '';
+
+      if (isDiscrete && this.markers) {
+        markersTemplate = html`
+        <div
+            class="mdc-slider__track-marker-container"
+            style="${styleMap(this.trackMarkerContainerStyles)}">
+        </div>`;
+      }
+
+      let pin = '';
+
+      if (this.pin) {
+        pin = html`
+      <div class="mdc-slider__pin">
+        <span class="mdc-slider__pin-value-marker">${this.pinMarkerText}</span>
+      </div>`;
+      }
+
+      return html`
+      <div class="mdc-slider ${classMap(hostClassInfo)}"
+           tabindex="0" role="slider"
+           aria-valuemin="${this.min}" aria-valuemax="${this.max}"
+           aria-valuenow="${this.value}" aria-disabled="${this.disabled}"
+           data-step="${this.step}"
+           @mousedown=${this.layout}
+           @touchstart=${this.layout}>
+        <div class="mdc-slider__track-container">
+          <div
+              class="mdc-slider__track"
+              style="${styleMap(this.trackStyles)}">
+          </div>
+          ${markersTemplate}
+        </div>
+        <div
+            class="mdc-slider__thumb-container"
+            style="${styleMap(this.thumbContainerStyles)}">
+          <!-- TODO: use cache() directive -->
+          ${pin}
+          <svg class="mdc-slider__thumb" width="21" height="21">
+            <circle cx="10.5" cy="10.5" r="7.875"></circle>
+          </svg>
+        <div class="mdc-slider__focus-ring"></div>
+      </div>
+    </div>`;
+    }
+
+    connectedCallback() {
+      super.connectedCallback();
+
+      if (this.mdcRoot && this.isFoundationDestroyed) {
+        this.isFoundationDestroyed = false;
+        this.mdcFoundation.init();
+      }
+    }
+
+    disconnectedCallback() {
+      super.disconnectedCallback();
+      this.isFoundationDestroyed = true;
+      this.mdcFoundation.destroy();
+    }
+
+    createAdapter() {
+      return Object.assign(Object.assign({}, addHasRemoveClass(this.mdcRoot)), {
+        getAttribute: name => this.mdcRoot.getAttribute(name),
+        setAttribute: (name, value) => this.mdcRoot.setAttribute(name, value),
+        removeAttribute: name => this.mdcRoot.removeAttribute(name),
+        computeBoundingRect: () => {
+          const rect = this.mdcRoot.getBoundingClientRect();
+          const myRect = {
+            bottom: rect.bottom,
+            height: rect.height,
+            left: rect.left + window.pageXOffset,
+            right: rect.right,
+            top: rect.top,
+            width: rect.width
+          };
+          return myRect;
+        },
+        getTabIndex: () => this.mdcRoot.tabIndex,
+        registerInteractionHandler: (type, handler) => {
+          const init = type === 'touchstart' ? applyPassive() : undefined;
+          this.mdcRoot.addEventListener(type, handler, init);
+        },
+        deregisterInteractionHandler: (type, handler) => this.mdcRoot.removeEventListener(type, handler),
+        registerThumbContainerInteractionHandler: (type, handler) => {
+          const init = type === 'touchstart' ? applyPassive() : undefined;
+          this.thumbContainer.addEventListener(type, handler, init);
+        },
+        deregisterThumbContainerInteractionHandler: (type, handler) => this.thumbContainer.removeEventListener(type, handler),
+        registerBodyInteractionHandler: (type, handler) => document.body.addEventListener(type, handler),
+        deregisterBodyInteractionHandler: (type, handler) => document.body.removeEventListener(type, handler),
+        registerResizeHandler: handler => window.addEventListener('resize', handler, applyPassive()),
+        deregisterResizeHandler: handler => window.removeEventListener('resize', handler),
+        notifyInput: () => {
+          const value = this.mdcFoundation.getValue();
+
+          if (value !== this.value) {
+            this.value = value;
+            this.dispatchEvent(new CustomEvent(INPUT_EVENT, {
+              detail: this,
+              composed: true,
+              bubbles: true,
+              cancelable: true
+            }));
+          }
+        },
+        notifyChange: () => {
+          this.dispatchEvent(new CustomEvent(CHANGE_EVENT, {
+            detail: this,
+            composed: true,
+            bubbles: true,
+            cancelable: true
+          }));
+        },
+        setThumbContainerStyleProperty: (propertyName, value) => {
+          this.thumbContainerStyles[propertyName] = value;
+          this.requestUpdate();
+        },
+        setTrackStyleProperty: (propertyName, value) => {
+          this.trackStyles[propertyName] = value;
+          this.requestUpdate();
+        },
+        setMarkerValue: value => this.pinMarkerText = value.toLocaleString(),
+        setTrackMarkers: (step, max, min) => {
+          // calculates the CSS for the notches on the slider. Taken from
+          // https://github.com/material-components/material-components-web/blob/8f851d9ed2f75dc8b8956d15b3bb2619e59fa8a9/packages/mdc-slider/component.ts#L122
+          const stepStr = step.toLocaleString();
+          const maxStr = max.toLocaleString();
+          const minStr = min.toLocaleString(); // keep calculation in css for better rounding/subpixel behavior
+
+          const markerAmount = `((${maxStr} - ${minStr}) / ${stepStr})`;
+          const markerWidth = '2px';
+          const markerBkgdImage = `linear-gradient(to right, currentColor ${markerWidth}, transparent 0)`;
+          const markerBkgdLayout = `0 center / calc((100% - ${markerWidth}) / ${markerAmount}) 100% repeat-x`;
+          const markerBkgdShorthand = `${markerBkgdImage} ${markerBkgdLayout}`;
+          this.trackMarkerContainerStyles['background'] = markerBkgdShorthand;
+          this.requestUpdate();
+        },
+        isRTL: () => getComputedStyle(this.mdcRoot).direction === 'rtl'
+      });
+    }
+
+    resetFoundation() {
+      if (this.mdcFoundation) {
+        this.mdcFoundation.destroy();
+        this.mdcFoundation.init();
+      }
+    }
+    /**
+     * Layout is called on mousedown / touchstart as the dragging animations of
+     * slider are calculated based off of the bounding rect which can change
+     * between interactions with this component, and this is the only location
+     * in the foundation that udpates the rects. e.g. scrolling horizontally
+     * causes adverse effects on the bounding rect vs mouse drag / touchmove
+     * location.
+     */
+
+
+    layout() {
+      this.mdcFoundation.layout();
+    }
+
+  }
+
+  __decorate([query('.mdc-slider')], SliderBase.prototype, "mdcRoot", void 0);
+
+  __decorate([query('.mdc-slider')], SliderBase.prototype, "formElement", void 0);
+
+  __decorate([query('.mdc-slider__thumb-container')], SliderBase.prototype, "thumbContainer", void 0);
+
+  __decorate([query('.mdc-slider__pin-value-marker')], SliderBase.prototype, "pinMarker", void 0);
+
+  __decorate([property({
+    type: Number
+  }), observer(function (value) {
+    this.mdcFoundation.setValue(value);
+  })], SliderBase.prototype, "value", void 0);
+
+  __decorate([property({
+    type: Number
+  }), observer(function (value) {
+    this.mdcFoundation.setMin(value);
+  })], SliderBase.prototype, "min", void 0);
+
+  __decorate([property({
+    type: Number
+  }), observer(function (value) {
+    this.mdcFoundation.setMax(value);
+  })], SliderBase.prototype, "max", void 0);
+
+  __decorate([property({
+    type: Number
+  }), observer(function (value, old) {
+    const oldWasDiscrete = old !== 0;
+    const newIsDiscrete = value !== 0;
+
+    if (oldWasDiscrete !== newIsDiscrete) {
+      this.resetFoundation();
+    }
+
+    this.mdcFoundation.setStep(value);
+  })], SliderBase.prototype, "step", void 0);
+
+  __decorate([property({
+    type: Boolean,
+    reflect: true
+  }), observer(function (value) {
+    this.mdcFoundation.setDisabled(value);
+  })], SliderBase.prototype, "disabled", void 0);
+
+  __decorate([property({
+    type: Boolean,
+    reflect: true
+  })], SliderBase.prototype, "pin", void 0);
+
+  __decorate([property({
+    type: Boolean,
+    reflect: true
+  }), observer(function () {
+    this.mdcFoundation.setupTrackMarker();
+  })], SliderBase.prototype, "markers", void 0);
+
+  __decorate([property({
+    type: String
+  })], SliderBase.prototype, "pinMarkerText", void 0);
+
+  __decorate([property({
+    type: Object
+  })], SliderBase.prototype, "trackMarkerContainerStyles", void 0);
+
+  __decorate([property({
+    type: Object
+  })], SliderBase.prototype, "thumbContainerStyles", void 0);
+
+  __decorate([property({
+    type: Object
+  })], SliderBase.prototype, "trackStyles", void 0);
+
+  __decorate([eventOptions({
+    capture: true,
+    passive: true
+  })], SliderBase.prototype, "layout", null);
+
+  /**
+  @license
+  Copyright 2018 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  */
+  const style$6 = css`@keyframes mdc-slider-emphasize{0%{animation-timing-function:ease-out}50%{animation-timing-function:ease-in;transform:scale(0.85)}100%{transform:scale(0.571)}}.mdc-slider{position:relative;width:100%;height:48px;cursor:pointer;touch-action:pan-x;-webkit-tap-highlight-color:rgba(0,0,0,0)}.mdc-slider:not(.mdc-slider--disabled) .mdc-slider__track{background-color:#018786;background-color:var(--mdc-theme-secondary, #018786)}.mdc-slider:not(.mdc-slider--disabled) .mdc-slider__track-container{background-color:rgba(1,135,134,.26)}.mdc-slider:not(.mdc-slider--disabled) .mdc-slider__track-marker-container{background-color:#018786;background-color:var(--mdc-theme-secondary, #018786)}.mdc-slider:not(.mdc-slider--disabled) .mdc-slider__thumb{fill:#018786;fill:var(--mdc-theme-secondary, #018786);stroke:#018786;stroke:var(--mdc-theme-secondary, #018786)}.mdc-slider:not(.mdc-slider--disabled) .mdc-slider__focus-ring{background-color:#018786;background-color:var(--mdc-theme-secondary, #018786)}.mdc-slider:not(.mdc-slider--disabled) .mdc-slider__pin{background-color:#018786;background-color:var(--mdc-theme-secondary, #018786)}.mdc-slider:not(.mdc-slider--disabled) .mdc-slider__pin{color:#fff;color:var(--mdc-theme-text-primary-on-dark, white)}.mdc-slider--disabled{cursor:auto}.mdc-slider--disabled .mdc-slider__track{background-color:#9a9a9a}.mdc-slider--disabled .mdc-slider__track-container{background-color:rgba(154,154,154,.26)}.mdc-slider--disabled .mdc-slider__track-marker-container{background-color:#9a9a9a}.mdc-slider--disabled .mdc-slider__thumb{fill:#9a9a9a;stroke:#9a9a9a}.mdc-slider--disabled .mdc-slider__thumb{stroke:#fff;stroke:var(--mdc-slider-bg-color-behind-component, white)}.mdc-slider:focus{outline:none}.mdc-slider__track-container{position:absolute;top:50%;width:100%;height:2px;overflow:hidden}.mdc-slider__track{position:absolute;width:100%;height:100%;transform-origin:left top;will-change:transform}.mdc-slider[dir=rtl] .mdc-slider__track,[dir=rtl] .mdc-slider .mdc-slider__track{transform-origin:right top}.mdc-slider__track-marker-container{display:flex;margin-right:0;margin-left:-1px;visibility:hidden}.mdc-slider[dir=rtl] .mdc-slider__track-marker-container,[dir=rtl] .mdc-slider .mdc-slider__track-marker-container{margin-right:-1px;margin-left:0}.mdc-slider__track-marker-container::after{display:block;width:2px;height:2px;content:""}.mdc-slider__track-marker{flex:1}.mdc-slider__track-marker::after{display:block;width:2px;height:2px;content:""}.mdc-slider__track-marker:first-child::after{width:3px}.mdc-slider__thumb-container{position:absolute;top:15px;left:0;width:21px;height:100%;user-select:none;will-change:transform}.mdc-slider__thumb{position:absolute;top:0;left:0;transform:scale(0.571);stroke-width:3.5;transition:transform 100ms ease-out,fill 100ms ease-out,stroke 100ms ease-out}.mdc-slider__focus-ring{width:21px;height:21px;border-radius:50%;opacity:0;transition:transform 266.67ms ease-out,opacity 266.67ms ease-out,background-color 266.67ms ease-out}.mdc-slider__pin{display:flex;position:absolute;top:0;left:0;align-items:center;justify-content:center;width:26px;height:26px;margin-top:-2px;margin-left:-2px;transform:rotate(-45deg) scale(0) translate(0, 0);border-radius:50% 50% 50% 0%;z-index:1;transition:transform 100ms ease-out}.mdc-slider__pin-value-marker{font-family:Roboto, sans-serif;-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased;font-size:.875rem;line-height:1.25rem;font-weight:400;letter-spacing:.0178571429em;text-decoration:inherit;text-transform:inherit;transform:rotate(45deg)}.mdc-slider--active .mdc-slider__thumb{transform:scale3d(1, 1, 1)}.mdc-slider--focus .mdc-slider__thumb{animation:mdc-slider-emphasize 266.67ms linear}.mdc-slider--focus .mdc-slider__focus-ring{transform:scale3d(1.55, 1.55, 1.55);opacity:.25}.mdc-slider--in-transit .mdc-slider__thumb{transition-delay:140ms}.mdc-slider--in-transit .mdc-slider__thumb-container,.mdc-slider--in-transit .mdc-slider__track,.mdc-slider:focus:not(.mdc-slider--active) .mdc-slider__thumb-container,.mdc-slider:focus:not(.mdc-slider--active) .mdc-slider__track{transition:transform 80ms ease}.mdc-slider--discrete.mdc-slider--active .mdc-slider__thumb{transform:scale(calc(12 / 21))}.mdc-slider--discrete.mdc-slider--active .mdc-slider__pin{transform:rotate(-45deg) scale(1) translate(19px, -20px)}.mdc-slider--discrete.mdc-slider--focus .mdc-slider__thumb{animation:none}.mdc-slider--discrete.mdc-slider--display-markers .mdc-slider__track-marker-container{visibility:visible}:host{display:inline-block;min-width:120px;outline:none}`;
+
+  let Slider = class Slider extends SliderBase {};
+  Slider.styles = style$6;
+  Slider = __decorate([customElement('mwc-slider')], Slider);
 
   /**
   @license
@@ -8159,7 +13609,7 @@
    * @return {boolean} True if `path` is equal to `base`
    */
 
-  function matches$1(base, path) {
+  function matches$2(base, path) {
     return base === path || isAncestor(base, path) || isDescendant(base, path);
   }
   /**
@@ -15998,7 +21448,7 @@
   const DIR_INSTANCES = [];
   /** @type {?MutationObserver} */
 
-  let observer = null;
+  let observer$1 = null;
   let documentDir = '';
 
   function getRTL() {
@@ -16028,7 +21478,7 @@
   }
 
   function takeRecords() {
-    if (observer && observer.takeRecords().length) {
+    if (observer$1 && observer$1.takeRecords().length) {
       updateDirection();
     }
   }
@@ -16062,10 +21512,10 @@
 
   const DirMixin = dedupingMixin(base => {
     if (!SHIM_SHADOW) {
-      if (!observer) {
+      if (!observer$1) {
         getRTL();
-        observer = new MutationObserver(updateDirection);
-        observer.observe(document.documentElement, {
+        observer$1 = new MutationObserver(updateDirection);
+        observer$1.observe(document.documentElement, {
           attributes: true,
           attributeFilter: ['dir']
         });
@@ -20981,7 +26431,7 @@
            * @param {*} value Value to notify
            */
           notifyInstanceProp: function (inst, prop, value) {
-            if (matches$1(this.as, prop)) {
+            if (matches$2(this.as, prop)) {
               let idx = inst[this.itemsIndexAs];
 
               if (prop == this.as) {
@@ -23178,3950 +28628,6 @@
     _template: template$1,
     is: 'paper-spinner-lite',
     behaviors: [PaperSpinnerBehavior]
-  });
-
-  /**
-  @license
-  Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-  This code may only be used under the BSD style license found at
-  http://polymer.github.io/LICENSE.txt The complete set of authors may be found at
-  http://polymer.github.io/AUTHORS.txt The complete set of contributors may be
-  found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by Google as
-  part of the polymer project is also subject to an additional IP rights grant
-  found at http://polymer.github.io/PATENTS.txt
-  */
-  /**
-  `iron-a11y-announcer` is a singleton element that is intended to add a11y
-  to features that require on-demand announcement from screen readers. In
-  order to make use of the announcer, it is best to request its availability
-  in the announcing element.
-
-  Example:
-
-      Polymer({
-
-        is: 'x-chatty',
-
-        attached: function() {
-          // This will create the singleton element if it has not
-          // been created yet:
-          Polymer.IronA11yAnnouncer.requestAvailability();
-        }
-      });
-
-  After the `iron-a11y-announcer` has been made available, elements can
-  make announces by firing bubbling `iron-announce` events.
-
-  Example:
-
-      this.fire('iron-announce', {
-        text: 'This is an announcement!'
-      }, { bubbles: true });
-
-  Note: announcements are only audible if you have a screen reader enabled.
-
-  @group Iron Elements
-  @demo demo/index.html
-  */
-
-  const IronA11yAnnouncer = Polymer({
-    _template: html$1`
-    <style>
-      :host {
-        display: inline-block;
-        position: fixed;
-        clip: rect(0px,0px,0px,0px);
-      }
-    </style>
-    <div aria-live$="[[mode]]">[[_text]]</div>
-`,
-    is: 'iron-a11y-announcer',
-    properties: {
-      /**
-       * The value of mode is used to set the `aria-live` attribute
-       * for the element that will be announced. Valid values are: `off`,
-       * `polite` and `assertive`.
-       */
-      mode: {
-        type: String,
-        value: 'polite'
-      },
-      _text: {
-        type: String,
-        value: ''
-      }
-    },
-    created: function () {
-      if (!IronA11yAnnouncer.instance) {
-        IronA11yAnnouncer.instance = this;
-      }
-
-      document.body.addEventListener('iron-announce', this._onIronAnnounce.bind(this));
-    },
-
-    /**
-     * Cause a text string to be announced by screen readers.
-     *
-     * @param {string} text The text that should be announced.
-     */
-    announce: function (text) {
-      this._text = '';
-      this.async(function () {
-        this._text = text;
-      }, 100);
-    },
-    _onIronAnnounce: function (event) {
-      if (event.detail && event.detail.text) {
-        this.announce(event.detail.text);
-      }
-    }
-  });
-  IronA11yAnnouncer.instance = null;
-
-  IronA11yAnnouncer.requestAvailability = function () {
-    if (!IronA11yAnnouncer.instance) {
-      IronA11yAnnouncer.instance = document.createElement('iron-a11y-announcer');
-    }
-
-    document.body.appendChild(IronA11yAnnouncer.instance);
-  };
-
-  /**
-  @license
-  Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-  This code may only be used under the BSD style license found at
-  http://polymer.github.io/LICENSE.txt The complete set of authors may be found at
-  http://polymer.github.io/AUTHORS.txt The complete set of contributors may be
-  found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by Google as
-  part of the polymer project is also subject to an additional IP rights grant
-  found at http://polymer.github.io/PATENTS.txt
-  */
-  class IronMeta {
-    /**
-     * @param {{
-     *   type: (string|null|undefined),
-     *   key: (string|null|undefined),
-     *   value: *,
-     * }=} options
-     */
-    constructor(options) {
-      IronMeta[' '](options);
-      /** @type {string} */
-
-      this.type = options && options.type || 'default';
-      /** @type {string|null|undefined} */
-
-      this.key = options && options.key;
-
-      if (options && 'value' in options) {
-        /** @type {*} */
-        this.value = options.value;
-      }
-    }
-    /** @return {*} */
-
-
-    get value() {
-      var type = this.type;
-      var key = this.key;
-
-      if (type && key) {
-        return IronMeta.types[type] && IronMeta.types[type][key];
-      }
-    }
-    /** @param {*} value */
-
-
-    set value(value) {
-      var type = this.type;
-      var key = this.key;
-
-      if (type && key) {
-        type = IronMeta.types[type] = IronMeta.types[type] || {};
-
-        if (value == null) {
-          delete type[key];
-        } else {
-          type[key] = value;
-        }
-      }
-    }
-    /** @return {!Array<*>} */
-
-
-    get list() {
-      var type = this.type;
-
-      if (type) {
-        var items = IronMeta.types[this.type];
-
-        if (!items) {
-          return [];
-        }
-
-        return Object.keys(items).map(function (key) {
-          return metaDatas[this.type][key];
-        }, this);
-      }
-    }
-    /**
-     * @param {string} key
-     * @return {*}
-     */
-
-
-    byKey(key) {
-      this.key = key;
-      return this.value;
-    }
-
-  }
-  // for instances that are not held anywhere. For example, when
-  // `new IronMeta({...})` is used only for the side effect of adding a value.
-
-  IronMeta[' '] = function () {};
-
-  IronMeta.types = {};
-  var metaDatas = IronMeta.types;
-  /**
-  `iron-meta` is a generic element you can use for sharing information across the
-  DOM tree. It uses [monostate pattern](http://c2.com/cgi/wiki?MonostatePattern)
-  such that any instance of iron-meta has access to the shared information. You
-  can use `iron-meta` to share whatever you want (or create an extension [like
-  x-meta] for enhancements).
-
-  The `iron-meta` instances containing your actual data can be loaded in an
-  import, or constructed in any way you see fit. The only requirement is that you
-  create them before you try to access them.
-
-  Examples:
-
-  If I create an instance like this:
-
-      <iron-meta key="info" value="foo/bar"></iron-meta>
-
-  Note that value="foo/bar" is the metadata I've defined. I could define more
-  attributes or use child nodes to define additional metadata.
-
-  Now I can access that element (and it's metadata) from any iron-meta instance
-  via the byKey method, e.g.
-
-      meta.byKey('info');
-
-  Pure imperative form would be like:
-
-      document.createElement('iron-meta').byKey('info');
-
-  Or, in a Polymer element, you can include a meta in your template:
-
-      <iron-meta id="meta"></iron-meta>
-      ...
-      this.$.meta.byKey('info');
-
-  @group Iron Elements
-  @demo demo/index.html
-  @element iron-meta
-  */
-
-  Polymer({
-    is: 'iron-meta',
-    properties: {
-      /**
-       * The type of meta-data.  All meta-data of the same type is stored
-       * together.
-       * @type {string}
-       */
-      type: {
-        type: String,
-        value: 'default'
-      },
-
-      /**
-       * The key used to store `value` under the `type` namespace.
-       * @type {?string}
-       */
-      key: {
-        type: String
-      },
-
-      /**
-       * The meta-data to store or retrieve.
-       * @type {*}
-       */
-      value: {
-        type: String,
-        notify: true
-      },
-
-      /**
-       * If true, `value` is set to the iron-meta instance itself.
-       */
-      self: {
-        type: Boolean,
-        observer: '_selfChanged'
-      },
-      __meta: {
-        type: Boolean,
-        computed: '__computeMeta(type, key, value)'
-      }
-    },
-    hostAttributes: {
-      hidden: true
-    },
-    __computeMeta: function (type, key, value) {
-      var meta = new IronMeta({
-        type: type,
-        key: key
-      });
-
-      if (value !== undefined && value !== meta.value) {
-        meta.value = value;
-      } else if (this.value !== meta.value) {
-        this.value = meta.value;
-      }
-
-      return meta;
-    },
-
-    get list() {
-      return this.__meta && this.__meta.list;
-    },
-
-    _selfChanged: function (self) {
-      if (self) {
-        this.value = this;
-      }
-    },
-
-    /**
-     * Retrieves meta data value by key.
-     *
-     * @method byKey
-     * @param {string} key The key of the meta-data to be returned.
-     * @return {*}
-     */
-    byKey: function (key) {
-      return new IronMeta({
-        type: this.type,
-        key: key
-      }).value;
-    }
-  });
-
-  /**
-  @license
-  Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-  This code may only be used under the BSD style license found at
-  http://polymer.github.io/LICENSE.txt The complete set of authors may be found at
-  http://polymer.github.io/AUTHORS.txt The complete set of contributors may be
-  found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by Google as
-  part of the polymer project is also subject to an additional IP rights grant
-  found at http://polymer.github.io/PATENTS.txt
-  */
-  /**
-   * Singleton IronMeta instance.
-   */
-
-  let IronValidatableBehaviorMeta = null;
-  /**
-   * `Use IronValidatableBehavior` to implement an element that validates
-   * user input. Use the related `IronValidatorBehavior` to add custom
-   * validation logic to an iron-input.
-   *
-   * By default, an `<iron-form>` element validates its fields when the user
-   * presses the submit button. To validate a form imperatively, call the form's
-   * `validate()` method, which in turn will call `validate()` on all its
-   * children. By using `IronValidatableBehavior`, your custom element
-   * will get a public `validate()`, which will return the validity of the
-   * element, and a corresponding `invalid` attribute, which can be used for
-   * styling.
-   *
-   * To implement the custom validation logic of your element, you must override
-   * the protected `_getValidity()` method of this behaviour, rather than
-   * `validate()`. See
-   * [this](https://github.com/PolymerElements/iron-form/blob/master/demo/simple-element.html)
-   * for an example.
-   *
-   * ### Accessibility
-   *
-   * Changing the `invalid` property, either manually or by calling `validate()`
-   * will update the `aria-invalid` attribute.
-   *
-   * @demo demo/index.html
-   * @polymerBehavior
-   */
-
-  const IronValidatableBehavior = {
-    properties: {
-      /**
-       * Name of the validator to use.
-       */
-      validator: {
-        type: String
-      },
-
-      /**
-       * True if the last call to `validate` is invalid.
-       */
-      invalid: {
-        notify: true,
-        reflectToAttribute: true,
-        type: Boolean,
-        value: false,
-        observer: '_invalidChanged'
-      }
-    },
-    registered: function () {
-      IronValidatableBehaviorMeta = new IronMeta({
-        type: 'validator'
-      });
-    },
-    _invalidChanged: function () {
-      if (this.invalid) {
-        this.setAttribute('aria-invalid', 'true');
-      } else {
-        this.removeAttribute('aria-invalid');
-      }
-    },
-
-    /* Recompute this every time it's needed, because we don't know if the
-     * underlying IronValidatableBehaviorMeta has changed. */
-    get _validator() {
-      return IronValidatableBehaviorMeta && IronValidatableBehaviorMeta.byKey(this.validator);
-    },
-
-    /**
-     * @return {boolean} True if the validator `validator` exists.
-     */
-    hasValidator: function () {
-      return this._validator != null;
-    },
-
-    /**
-     * Returns true if the `value` is valid, and updates `invalid`. If you want
-     * your element to have custom validation logic, do not override this method;
-     * override `_getValidity(value)` instead.
-      * @param {Object} value Deprecated: The value to be validated. By default,
-     * it is passed to the validator's `validate()` function, if a validator is
-     set.
-     * If this argument is not specified, then the element's `value` property
-     * is used, if it exists.
-     * @return {boolean} True if `value` is valid.
-     */
-    validate: function (value) {
-      // If this is an element that also has a value property, and there was
-      // no explicit value argument passed, use the element's property instead.
-      if (value === undefined && this.value !== undefined) this.invalid = !this._getValidity(this.value);else this.invalid = !this._getValidity(value);
-      return !this.invalid;
-    },
-
-    /**
-     * Returns true if `value` is valid.  By default, it is passed
-     * to the validator's `validate()` function, if a validator is set. You
-     * should override this method if you want to implement custom validity
-     * logic for your element.
-     *
-     * @param {Object} value The value to be validated.
-     * @return {boolean} True if `value` is valid.
-     */
-    _getValidity: function (value) {
-      if (this.hasValidator()) {
-        return this._validator.validate(value);
-      }
-
-      return true;
-    }
-  };
-
-  /**
-  @license
-  Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-  This code may only be used under the BSD style license found at
-  http://polymer.github.io/LICENSE.txt The complete set of authors may be found at
-  http://polymer.github.io/AUTHORS.txt The complete set of contributors may be
-  found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by Google as
-  part of the polymer project is also subject to an additional IP rights grant
-  found at http://polymer.github.io/PATENTS.txt
-  */
-  /**
-  `<iron-input>` is a wrapper to a native `<input>` element, that adds two-way
-  binding and prevention of invalid input. To use it, you must distribute a native
-  `<input>` yourself. You can continue to use the native `input` as you would
-  normally:
-
-      <iron-input>
-        <input>
-      </iron-input>
-
-      <iron-input>
-        <input type="email" disabled>
-      </iron-input>
-
-  ### Two-way binding
-
-  By default you can only get notified of changes to a native `<input>`'s `value`
-  due to user input:
-
-      <input value="{{myValue::input}}">
-
-  This means that if you imperatively set the value (i.e. `someNativeInput.value =
-  'foo'`), no events will be fired and this change cannot be observed.
-
-  `iron-input` adds the `bind-value` property that mirrors the native `input`'s
-  '`value` property; this property can be used for two-way data binding.
-  `bind-value` will notify if it is changed either by user input or by script.
-
-      <iron-input bind-value="{{myValue}}">
-        <input>
-      </iron-input>
-
-  Note: this means that if you want to imperatively set the native `input`'s, you
-  _must_ set `bind-value` instead, so that the wrapper `iron-input` can be
-  notified.
-
-  ### Validation
-
-  `iron-input` uses the native `input`'s validation. For simplicity, `iron-input`
-  has a `validate()` method (which internally just checks the distributed
-  `input`'s validity), which sets an `invalid` attribute that can also be used for
-  styling.
-
-  To validate automatically as you type, you can use the `auto-validate`
-  attribute.
-
-  `iron-input` also fires an `iron-input-validate` event after `validate()` is
-  called. You can use it to implement a custom validator:
-
-      var CatsOnlyValidator = {
-        validate: function(ironInput) {
-          var valid = !ironInput.bindValue || ironInput.bindValue === 'cat';
-          ironInput.invalid = !valid;
-          return valid;
-        }
-      }
-      ironInput.addEventListener('iron-input-validate', function() {
-        CatsOnly.validate(input2);
-      });
-
-  You can also use an element implementing an
-  [`IronValidatorBehavior`](/element/PolymerElements/iron-validatable-behavior).
-  This example can also be found in the demo for this element:
-
-      <iron-input validator="cats-only">
-        <input>
-      </iron-input>
-
-  ### Preventing invalid input
-
-  It may be desirable to only allow users to enter certain characters. You can use
-  the `allowed-pattern` attribute to accomplish this. This feature is separate
-  from validation, and `allowed-pattern` does not affect how the input is
-  validated.
-
-      // Only allow typing digits, but a valid input has exactly 5 digits.
-      <iron-input allowed-pattern="[0-9]">
-        <input pattern="\d{5}">
-      </iron-input>
-
-  @demo demo/index.html
-  */
-
-  Polymer({
-    _template: html$1`
-    <style>
-      :host {
-        display: inline-block;
-      }
-    </style>
-    <slot id="content"></slot>
-`,
-    is: 'iron-input',
-    behaviors: [IronValidatableBehavior],
-
-    /**
-     * Fired whenever `validate()` is called.
-     *
-     * @event iron-input-validate
-     */
-    properties: {
-      /**
-       * Use this property instead of `value` for two-way data binding, or to
-       * set a default value for the input. **Do not** use the distributed
-       * input's `value` property to set a default value.
-       */
-      bindValue: {
-        type: String,
-        value: ''
-      },
-
-      /**
-       * Computed property that echoes `bindValue` (mostly used for Polymer 1.0
-       * backcompatibility, if you were one-way binding to the Polymer 1.0
-       * `input is="iron-input"` value attribute).
-       */
-      value: {
-        type: String,
-        computed: '_computeValue(bindValue)'
-      },
-
-      /**
-       * Regex-like list of characters allowed as input; all characters not in the
-       * list will be rejected. The recommended format should be a list of allowed
-       * characters, for example, `[a-zA-Z0-9.+-!;:]`.
-       *
-       * This pattern represents the allowed characters for the field; as the user
-       * inputs text, each individual character will be checked against the
-       * pattern (rather than checking the entire value as a whole). If a
-       * character is not a match, it will be rejected.
-       *
-       * Pasted input will have each character checked individually; if any
-       * character doesn't match `allowedPattern`, the entire pasted string will
-       * be rejected.
-       *
-       * Note: if you were using `iron-input` in 1.0, you were also required to
-       * set `prevent-invalid-input`. This is no longer needed as of Polymer 2.0,
-       * and will be set automatically for you if an `allowedPattern` is provided.
-       *
-       */
-      allowedPattern: {
-        type: String
-      },
-
-      /**
-       * Set to true to auto-validate the input value as you type.
-       */
-      autoValidate: {
-        type: Boolean,
-        value: false
-      },
-
-      /**
-       * The native input element.
-       */
-      _inputElement: Object
-    },
-    observers: ['_bindValueChanged(bindValue, _inputElement)'],
-    listeners: {
-      'input': '_onInput',
-      'keypress': '_onKeypress'
-    },
-    created: function () {
-      IronA11yAnnouncer.requestAvailability();
-      this._previousValidInput = '';
-      this._patternAlreadyChecked = false;
-    },
-    attached: function () {
-      // If the input is added at a later time, update the internal reference.
-      this._observer = dom(this).observeNodes(function (info) {
-        this._initSlottedInput();
-      }.bind(this));
-    },
-    detached: function () {
-      if (this._observer) {
-        dom(this).unobserveNodes(this._observer);
-        this._observer = null;
-      }
-    },
-
-    /**
-     * Returns the distributed input element.
-     */
-    get inputElement() {
-      return this._inputElement;
-    },
-
-    _initSlottedInput: function () {
-      this._inputElement = this.getEffectiveChildren()[0];
-
-      if (this.inputElement && this.inputElement.value) {
-        this.bindValue = this.inputElement.value;
-      }
-
-      this.fire('iron-input-ready');
-    },
-
-    get _patternRegExp() {
-      var pattern;
-
-      if (this.allowedPattern) {
-        pattern = new RegExp(this.allowedPattern);
-      } else {
-        switch (this.inputElement.type) {
-          case 'number':
-            pattern = /[0-9.,e-]/;
-            break;
-        }
-      }
-
-      return pattern;
-    },
-
-    /**
-     * @suppress {checkTypes}
-     */
-    _bindValueChanged: function (bindValue, inputElement) {
-      // The observer could have run before attached() when we have actually
-      // initialized this property.
-      if (!inputElement) {
-        return;
-      }
-
-      if (bindValue === undefined) {
-        inputElement.value = null;
-      } else if (bindValue !== inputElement.value) {
-        this.inputElement.value = bindValue;
-      }
-
-      if (this.autoValidate) {
-        this.validate();
-      } // manually notify because we don't want to notify until after setting value
-
-
-      this.fire('bind-value-changed', {
-        value: bindValue
-      });
-    },
-    _onInput: function () {
-      // Need to validate each of the characters pasted if they haven't
-      // been validated inside `_onKeypress` already.
-      if (this.allowedPattern && !this._patternAlreadyChecked) {
-        var valid = this._checkPatternValidity();
-
-        if (!valid) {
-          this._announceInvalidCharacter('Invalid string of characters not entered.');
-
-          this.inputElement.value = this._previousValidInput;
-        }
-      }
-
-      this.bindValue = this._previousValidInput = this.inputElement.value;
-      this._patternAlreadyChecked = false;
-    },
-    _isPrintable: function (event) {
-      // What a control/printable character is varies wildly based on the browser.
-      // - most control characters (arrows, backspace) do not send a `keypress`
-      // event
-      //   in Chrome, but the *do* on Firefox
-      // - in Firefox, when they do send a `keypress` event, control chars have
-      //   a charCode = 0, keyCode = xx (for ex. 40 for down arrow)
-      // - printable characters always send a keypress event.
-      // - in Firefox, printable chars always have a keyCode = 0. In Chrome, the
-      // keyCode
-      //   always matches the charCode.
-      // None of this makes any sense.
-      // For these keys, ASCII code == browser keycode.
-      var anyNonPrintable = event.keyCode == 8 || // backspace
-      event.keyCode == 9 || // tab
-      event.keyCode == 13 || // enter
-      event.keyCode == 27; // escape
-      // For these keys, make sure it's a browser keycode and not an ASCII code.
-
-      var mozNonPrintable = event.keyCode == 19 || // pause
-      event.keyCode == 20 || // caps lock
-      event.keyCode == 45 || // insert
-      event.keyCode == 46 || // delete
-      event.keyCode == 144 || // num lock
-      event.keyCode == 145 || // scroll lock
-      event.keyCode > 32 && event.keyCode < 41 || // page up/down, end, home, arrows
-      event.keyCode > 111 && event.keyCode < 124; // fn keys
-
-      return !anyNonPrintable && !(event.charCode == 0 && mozNonPrintable);
-    },
-    _onKeypress: function (event) {
-      if (!this.allowedPattern && this.inputElement.type !== 'number') {
-        return;
-      }
-
-      var regexp = this._patternRegExp;
-
-      if (!regexp) {
-        return;
-      } // Handle special keys and backspace
-
-
-      if (event.metaKey || event.ctrlKey || event.altKey) {
-        return;
-      } // Check the pattern either here or in `_onInput`, but not in both.
-
-
-      this._patternAlreadyChecked = true;
-      var thisChar = String.fromCharCode(event.charCode);
-
-      if (this._isPrintable(event) && !regexp.test(thisChar)) {
-        event.preventDefault();
-
-        this._announceInvalidCharacter('Invalid character ' + thisChar + ' not entered.');
-      }
-    },
-    _checkPatternValidity: function () {
-      var regexp = this._patternRegExp;
-
-      if (!regexp) {
-        return true;
-      }
-
-      for (var i = 0; i < this.inputElement.value.length; i++) {
-        if (!regexp.test(this.inputElement.value[i])) {
-          return false;
-        }
-      }
-
-      return true;
-    },
-
-    /**
-     * Returns true if `value` is valid. The validator provided in `validator`
-     * will be used first, then any constraints.
-     * @return {boolean} True if the value is valid.
-     */
-    validate: function () {
-      if (!this.inputElement) {
-        this.invalid = false;
-        return true;
-      } // Use the nested input's native validity.
-
-
-      var valid = this.inputElement.checkValidity(); // Only do extra checking if the browser thought this was valid.
-
-      if (valid) {
-        // Empty, required input is invalid
-        if (this.required && this.bindValue === '') {
-          valid = false;
-        } else if (this.hasValidator()) {
-          valid = IronValidatableBehavior.validate.call(this, this.bindValue);
-        }
-      }
-
-      this.invalid = !valid;
-      this.fire('iron-input-validate');
-      return valid;
-    },
-    _announceInvalidCharacter: function (message) {
-      this.fire('iron-announce', {
-        text: message
-      });
-    },
-    _computeValue: function (bindValue) {
-      return bindValue;
-    }
-  });
-
-  /**
-  @license
-  Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-  This code may only be used under the BSD style license found at
-  http://polymer.github.io/LICENSE.txt The complete set of authors may be found at
-  http://polymer.github.io/AUTHORS.txt The complete set of contributors may be
-  found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by Google as
-  part of the polymer project is also subject to an additional IP rights grant
-  found at http://polymer.github.io/PATENTS.txt
-  */
-  // Give the user the choice to opt out of font loading.
-
-  if (!window.polymerSkipLoadingFontRoboto) {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.type = 'text/css';
-    link.crossOrigin = 'anonymous';
-    link.href = 'https://fonts.googleapis.com/css?family=Roboto+Mono:400,700|Roboto:400,300,300italic,400italic,500,500italic,700,700italic';
-    document.head.appendChild(link);
-  }
-
-  /**
-  @license
-  Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-  This code may only be used under the BSD style license found at
-  http://polymer.github.io/LICENSE.txt The complete set of authors may be found at
-  http://polymer.github.io/AUTHORS.txt The complete set of contributors may be
-  found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by Google as
-  part of the polymer project is also subject to an additional IP rights grant
-  found at http://polymer.github.io/PATENTS.txt
-  */
-  const template$2 = html$1`<custom-style>
-  <style is="custom-style">
-    html {
-
-      /* Shared Styles */
-      --paper-font-common-base: {
-        font-family: 'Roboto', 'Noto', sans-serif;
-        -webkit-font-smoothing: antialiased;
-      };
-
-      --paper-font-common-code: {
-        font-family: 'Roboto Mono', 'Consolas', 'Menlo', monospace;
-        -webkit-font-smoothing: antialiased;
-      };
-
-      --paper-font-common-expensive-kerning: {
-        text-rendering: optimizeLegibility;
-      };
-
-      --paper-font-common-nowrap: {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      };
-
-      /* Material Font Styles */
-
-      --paper-font-display4: {
-        @apply --paper-font-common-base;
-        @apply --paper-font-common-nowrap;
-
-        font-size: 112px;
-        font-weight: 300;
-        letter-spacing: -.044em;
-        line-height: 120px;
-      };
-
-      --paper-font-display3: {
-        @apply --paper-font-common-base;
-        @apply --paper-font-common-nowrap;
-
-        font-size: 56px;
-        font-weight: 400;
-        letter-spacing: -.026em;
-        line-height: 60px;
-      };
-
-      --paper-font-display2: {
-        @apply --paper-font-common-base;
-
-        font-size: 45px;
-        font-weight: 400;
-        letter-spacing: -.018em;
-        line-height: 48px;
-      };
-
-      --paper-font-display1: {
-        @apply --paper-font-common-base;
-
-        font-size: 34px;
-        font-weight: 400;
-        letter-spacing: -.01em;
-        line-height: 40px;
-      };
-
-      --paper-font-headline: {
-        @apply --paper-font-common-base;
-
-        font-size: 24px;
-        font-weight: 400;
-        letter-spacing: -.012em;
-        line-height: 32px;
-      };
-
-      --paper-font-title: {
-        @apply --paper-font-common-base;
-        @apply --paper-font-common-nowrap;
-
-        font-size: 20px;
-        font-weight: 500;
-        line-height: 28px;
-      };
-
-      --paper-font-subhead: {
-        @apply --paper-font-common-base;
-
-        font-size: 16px;
-        font-weight: 400;
-        line-height: 24px;
-      };
-
-      --paper-font-body2: {
-        @apply --paper-font-common-base;
-
-        font-size: 14px;
-        font-weight: 500;
-        line-height: 24px;
-      };
-
-      --paper-font-body1: {
-        @apply --paper-font-common-base;
-
-        font-size: 14px;
-        font-weight: 400;
-        line-height: 20px;
-      };
-
-      --paper-font-caption: {
-        @apply --paper-font-common-base;
-        @apply --paper-font-common-nowrap;
-
-        font-size: 12px;
-        font-weight: 400;
-        letter-spacing: 0.011em;
-        line-height: 20px;
-      };
-
-      --paper-font-menu: {
-        @apply --paper-font-common-base;
-        @apply --paper-font-common-nowrap;
-
-        font-size: 13px;
-        font-weight: 500;
-        line-height: 24px;
-      };
-
-      --paper-font-button: {
-        @apply --paper-font-common-base;
-        @apply --paper-font-common-nowrap;
-
-        font-size: 14px;
-        font-weight: 500;
-        letter-spacing: 0.018em;
-        line-height: 24px;
-        text-transform: uppercase;
-      };
-
-      --paper-font-code2: {
-        @apply --paper-font-common-code;
-
-        font-size: 14px;
-        font-weight: 700;
-        line-height: 20px;
-      };
-
-      --paper-font-code1: {
-        @apply --paper-font-common-code;
-
-        font-size: 14px;
-        font-weight: 500;
-        line-height: 20px;
-      };
-
-    }
-
-  </style>
-</custom-style>`;
-  template$2.setAttribute('style', 'display: none;');
-  document.head.appendChild(template$2.content);
-
-  /**
-  @license
-  Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-  This code may only be used under the BSD style license found at
-  http://polymer.github.io/LICENSE.txt The complete set of authors may be found at
-  http://polymer.github.io/AUTHORS.txt The complete set of contributors may be
-  found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by Google as
-  part of the polymer project is also subject to an additional IP rights grant
-  found at http://polymer.github.io/PATENTS.txt
-  */
-  /**
-   * Use `Polymer.PaperInputAddonBehavior` to implement an add-on for
-   * `<paper-input-container>`. A add-on appears below the input, and may display
-   * information based on the input value and validity such as a character counter
-   * or an error message.
-   * @polymerBehavior
-   */
-
-  const PaperInputAddonBehavior = {
-    attached: function () {
-      this.fire('addon-attached');
-    },
-
-    /**
-     * The function called by `<paper-input-container>` when the input value or
-     * validity changes.
-     * @param {{
-     *   invalid: boolean,
-     *   inputElement: (Element|undefined),
-     *   value: (string|undefined)
-     * }} state -
-     *     inputElement: The input element.
-     *     value: The input value.
-     *     invalid: True if the input value is invalid.
-     */
-    update: function (state) {}
-  };
-
-  /**
-  @license
-  Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-  This code may only be used under the BSD style license found at
-  http://polymer.github.io/LICENSE.txt The complete set of authors may be found at
-  http://polymer.github.io/AUTHORS.txt The complete set of contributors may be
-  found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by Google as
-  part of the polymer project is also subject to an additional IP rights grant
-  found at http://polymer.github.io/PATENTS.txt
-  */
-  /*
-  `<paper-input-char-counter>` is a character counter for use with
-  `<paper-input-container>`. It shows the number of characters entered in the
-  input and the max length if it is specified.
-
-      <paper-input-container>
-        <input maxlength="20">
-        <paper-input-char-counter></paper-input-char-counter>
-      </paper-input-container>
-
-  ### Styling
-
-  The following mixin is available for styling:
-
-  Custom property | Description | Default
-  ----------------|-------------|----------
-  `--paper-input-char-counter` | Mixin applied to the element | `{}`
-  */
-
-  Polymer({
-    /** @override */
-    _template: html$1`
-    <style>
-      :host {
-        display: inline-block;
-        float: right;
-
-        @apply --paper-font-caption;
-        @apply --paper-input-char-counter;
-      }
-
-      :host([hidden]) {
-        display: none !important;
-      }
-
-      :host(:dir(rtl)) {
-        float: left;
-      }
-    </style>
-
-    <span>[[_charCounterStr]]</span>
-`,
-    is: 'paper-input-char-counter',
-    behaviors: [PaperInputAddonBehavior],
-    properties: {
-      _charCounterStr: {
-        type: String,
-        value: '0'
-      }
-    },
-
-    /**
-     * This overrides the update function in PaperInputAddonBehavior.
-     * @param {{
-     *   inputElement: (Element|undefined),
-     *   value: (string|undefined),
-     *   invalid: boolean
-     * }} state -
-     *     inputElement: The input element.
-     *     value: The input value.
-     *     invalid: True if the input value is invalid.
-     */
-    update: function (state) {
-      if (!state.inputElement) {
-        return;
-      }
-
-      state.value = state.value || '';
-      var counter = state.value.toString().length.toString();
-
-      if (state.inputElement.hasAttribute('maxlength')) {
-        counter += '/' + state.inputElement.getAttribute('maxlength');
-      }
-
-      this._charCounterStr = counter;
-    }
-  });
-
-  /**
-  @license
-  Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-  This code may only be used under the BSD style license found at
-  http://polymer.github.io/LICENSE.txt The complete set of authors may be found at
-  http://polymer.github.io/AUTHORS.txt The complete set of contributors may be
-  found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by Google as
-  part of the polymer project is also subject to an additional IP rights grant
-  found at http://polymer.github.io/PATENTS.txt
-  */
-  /**
-  The `<iron-flex-layout>` component provides simple ways to use
-  [CSS flexible box
-  layout](https://developer.mozilla.org/en-US/docs/Web/Guide/CSS/Flexible_boxes),
-  also known as flexbox. Note that this is an old element, that was written
-  before all modern browsers had non-prefixed flex styles. As such, nowadays you
-  don't really need to use this element anymore, and can use CSS flex styles
-  directly in your code.
-
-  This component provides two different ways to use flexbox:
-
-  1. [Layout
-  classes](https://github.com/PolymerElements/iron-flex-layout/tree/master/iron-flex-layout-classes.html).
-  The layout class stylesheet provides a simple set of class-based flexbox rules,
-  that let you specify layout properties directly in markup. You must include this
-  file in every element that needs to use them.
-
-      Sample use:
-
-      ```
-      <custom-element-demo>
-        <template>
-          <script src="../webcomponentsjs/webcomponents-lite.js"></script>
-          <next-code-block></next-code-block>
-        </template>
-      </custom-element-demo>
-      ```
-
-      ```js
-      import {html} from '@polymer/polymer/lib/utils/html-tag.js';
-      import '@polymer/iron-flex-layout/iron-flex-layout-classes.js';
-
-      const template = html`
-        <style is="custom-style" include="iron-flex iron-flex-alignment"></style>
-        <style>
-          .test { width: 100px; }
-        </style>
-        <div class="layout horizontal center-center">
-          <div class="test">horizontal layout center alignment</div>
-        </div>
-      `;
-      document.body.appendChild(template.content);
-      ```
-
-  2. [Custom CSS
-  mixins](https://github.com/PolymerElements/iron-flex-layout/blob/master/iron-flex-layout.html).
-  The mixin stylesheet includes custom CSS mixins that can be applied inside a CSS
-  rule using the `@apply` function.
-
-  Please note that the old [/deep/ layout
-  classes](https://github.com/PolymerElements/iron-flex-layout/tree/master/classes)
-  are deprecated, and should not be used. To continue using layout properties
-  directly in markup, please switch to using the new `dom-module`-based
-  [layout
-  classes](https://github.com/PolymerElements/iron-flex-layout/tree/master/iron-flex-layout-classes.html).
-  Please note that the new version does not use `/deep/`, and therefore requires
-  you to import the `dom-modules` in every element that needs to use them.
-
-  @group Iron Elements
-  @pseudoElement iron-flex-layout
-  @demo demo/index.html
-  */
-
-  const template$3 = html$1`
-<custom-style>
-  <style is="custom-style">
-    [hidden] {
-      display: none !important;
-    }
-  </style>
-</custom-style>
-<custom-style>
-  <style is="custom-style">
-    html {
-
-      --layout: {
-        display: -ms-flexbox;
-        display: -webkit-flex;
-        display: flex;
-      };
-
-      --layout-inline: {
-        display: -ms-inline-flexbox;
-        display: -webkit-inline-flex;
-        display: inline-flex;
-      };
-
-      --layout-horizontal: {
-        @apply --layout;
-
-        -ms-flex-direction: row;
-        -webkit-flex-direction: row;
-        flex-direction: row;
-      };
-
-      --layout-horizontal-reverse: {
-        @apply --layout;
-
-        -ms-flex-direction: row-reverse;
-        -webkit-flex-direction: row-reverse;
-        flex-direction: row-reverse;
-      };
-
-      --layout-vertical: {
-        @apply --layout;
-
-        -ms-flex-direction: column;
-        -webkit-flex-direction: column;
-        flex-direction: column;
-      };
-
-      --layout-vertical-reverse: {
-        @apply --layout;
-
-        -ms-flex-direction: column-reverse;
-        -webkit-flex-direction: column-reverse;
-        flex-direction: column-reverse;
-      };
-
-      --layout-wrap: {
-        -ms-flex-wrap: wrap;
-        -webkit-flex-wrap: wrap;
-        flex-wrap: wrap;
-      };
-
-      --layout-wrap-reverse: {
-        -ms-flex-wrap: wrap-reverse;
-        -webkit-flex-wrap: wrap-reverse;
-        flex-wrap: wrap-reverse;
-      };
-
-      --layout-flex-auto: {
-        -ms-flex: 1 1 auto;
-        -webkit-flex: 1 1 auto;
-        flex: 1 1 auto;
-      };
-
-      --layout-flex-none: {
-        -ms-flex: none;
-        -webkit-flex: none;
-        flex: none;
-      };
-
-      --layout-flex: {
-        -ms-flex: 1 1 0.000000001px;
-        -webkit-flex: 1;
-        flex: 1;
-        -webkit-flex-basis: 0.000000001px;
-        flex-basis: 0.000000001px;
-      };
-
-      --layout-flex-2: {
-        -ms-flex: 2;
-        -webkit-flex: 2;
-        flex: 2;
-      };
-
-      --layout-flex-3: {
-        -ms-flex: 3;
-        -webkit-flex: 3;
-        flex: 3;
-      };
-
-      --layout-flex-4: {
-        -ms-flex: 4;
-        -webkit-flex: 4;
-        flex: 4;
-      };
-
-      --layout-flex-5: {
-        -ms-flex: 5;
-        -webkit-flex: 5;
-        flex: 5;
-      };
-
-      --layout-flex-6: {
-        -ms-flex: 6;
-        -webkit-flex: 6;
-        flex: 6;
-      };
-
-      --layout-flex-7: {
-        -ms-flex: 7;
-        -webkit-flex: 7;
-        flex: 7;
-      };
-
-      --layout-flex-8: {
-        -ms-flex: 8;
-        -webkit-flex: 8;
-        flex: 8;
-      };
-
-      --layout-flex-9: {
-        -ms-flex: 9;
-        -webkit-flex: 9;
-        flex: 9;
-      };
-
-      --layout-flex-10: {
-        -ms-flex: 10;
-        -webkit-flex: 10;
-        flex: 10;
-      };
-
-      --layout-flex-11: {
-        -ms-flex: 11;
-        -webkit-flex: 11;
-        flex: 11;
-      };
-
-      --layout-flex-12: {
-        -ms-flex: 12;
-        -webkit-flex: 12;
-        flex: 12;
-      };
-
-      /* alignment in cross axis */
-
-      --layout-start: {
-        -ms-flex-align: start;
-        -webkit-align-items: flex-start;
-        align-items: flex-start;
-      };
-
-      --layout-center: {
-        -ms-flex-align: center;
-        -webkit-align-items: center;
-        align-items: center;
-      };
-
-      --layout-end: {
-        -ms-flex-align: end;
-        -webkit-align-items: flex-end;
-        align-items: flex-end;
-      };
-
-      --layout-baseline: {
-        -ms-flex-align: baseline;
-        -webkit-align-items: baseline;
-        align-items: baseline;
-      };
-
-      /* alignment in main axis */
-
-      --layout-start-justified: {
-        -ms-flex-pack: start;
-        -webkit-justify-content: flex-start;
-        justify-content: flex-start;
-      };
-
-      --layout-center-justified: {
-        -ms-flex-pack: center;
-        -webkit-justify-content: center;
-        justify-content: center;
-      };
-
-      --layout-end-justified: {
-        -ms-flex-pack: end;
-        -webkit-justify-content: flex-end;
-        justify-content: flex-end;
-      };
-
-      --layout-around-justified: {
-        -ms-flex-pack: distribute;
-        -webkit-justify-content: space-around;
-        justify-content: space-around;
-      };
-
-      --layout-justified: {
-        -ms-flex-pack: justify;
-        -webkit-justify-content: space-between;
-        justify-content: space-between;
-      };
-
-      --layout-center-center: {
-        @apply --layout-center;
-        @apply --layout-center-justified;
-      };
-
-      /* self alignment */
-
-      --layout-self-start: {
-        -ms-align-self: flex-start;
-        -webkit-align-self: flex-start;
-        align-self: flex-start;
-      };
-
-      --layout-self-center: {
-        -ms-align-self: center;
-        -webkit-align-self: center;
-        align-self: center;
-      };
-
-      --layout-self-end: {
-        -ms-align-self: flex-end;
-        -webkit-align-self: flex-end;
-        align-self: flex-end;
-      };
-
-      --layout-self-stretch: {
-        -ms-align-self: stretch;
-        -webkit-align-self: stretch;
-        align-self: stretch;
-      };
-
-      --layout-self-baseline: {
-        -ms-align-self: baseline;
-        -webkit-align-self: baseline;
-        align-self: baseline;
-      };
-
-      /* multi-line alignment in main axis */
-
-      --layout-start-aligned: {
-        -ms-flex-line-pack: start;  /* IE10 */
-        -ms-align-content: flex-start;
-        -webkit-align-content: flex-start;
-        align-content: flex-start;
-      };
-
-      --layout-end-aligned: {
-        -ms-flex-line-pack: end;  /* IE10 */
-        -ms-align-content: flex-end;
-        -webkit-align-content: flex-end;
-        align-content: flex-end;
-      };
-
-      --layout-center-aligned: {
-        -ms-flex-line-pack: center;  /* IE10 */
-        -ms-align-content: center;
-        -webkit-align-content: center;
-        align-content: center;
-      };
-
-      --layout-between-aligned: {
-        -ms-flex-line-pack: justify;  /* IE10 */
-        -ms-align-content: space-between;
-        -webkit-align-content: space-between;
-        align-content: space-between;
-      };
-
-      --layout-around-aligned: {
-        -ms-flex-line-pack: distribute;  /* IE10 */
-        -ms-align-content: space-around;
-        -webkit-align-content: space-around;
-        align-content: space-around;
-      };
-
-      /*******************************
-                Other Layout
-      *******************************/
-
-      --layout-block: {
-        display: block;
-      };
-
-      --layout-invisible: {
-        visibility: hidden !important;
-      };
-
-      --layout-relative: {
-        position: relative;
-      };
-
-      --layout-fit: {
-        position: absolute;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
-      };
-
-      --layout-scroll: {
-        -webkit-overflow-scrolling: touch;
-        overflow: auto;
-      };
-
-      --layout-fullbleed: {
-        margin: 0;
-        height: 100vh;
-      };
-
-      /* fixed position */
-
-      --layout-fixed-top: {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-      };
-
-      --layout-fixed-right: {
-        position: fixed;
-        top: 0;
-        right: 0;
-        bottom: 0;
-      };
-
-      --layout-fixed-bottom: {
-        position: fixed;
-        right: 0;
-        bottom: 0;
-        left: 0;
-      };
-
-      --layout-fixed-left: {
-        position: fixed;
-        top: 0;
-        bottom: 0;
-        left: 0;
-      };
-
-    }
-  </style>
-</custom-style>`;
-  template$3.setAttribute('style', 'display: none;');
-  document.head.appendChild(template$3.content);
-  var style$3 = document.createElement('style');
-  style$3.textContent = '[hidden] { display: none !important; }';
-  document.head.appendChild(style$3);
-
-  /**
-  @license
-  Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-  This code may only be used under the BSD style license found at
-  http://polymer.github.io/LICENSE.txt The complete set of authors may be found at
-  http://polymer.github.io/AUTHORS.txt The complete set of contributors may be
-  found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by Google as
-  part of the polymer project is also subject to an additional IP rights grant
-  found at http://polymer.github.io/PATENTS.txt
-  */
-  const template$4 = html$1`
-<custom-style>
-  <style is="custom-style">
-    html {
-      /*
-       * You can use these generic variables in your elements for easy theming.
-       * For example, if all your elements use \`--primary-text-color\` as its main
-       * color, then switching from a light to a dark theme is just a matter of
-       * changing the value of \`--primary-text-color\` in your application.
-       */
-      --primary-text-color: var(--light-theme-text-color);
-      --primary-background-color: var(--light-theme-background-color);
-      --secondary-text-color: var(--light-theme-secondary-color);
-      --disabled-text-color: var(--light-theme-disabled-color);
-      --divider-color: var(--light-theme-divider-color);
-      --error-color: var(--paper-deep-orange-a700);
-
-      /*
-       * Primary and accent colors. Also see color.js for more colors.
-       */
-      --primary-color: var(--paper-indigo-500);
-      --light-primary-color: var(--paper-indigo-100);
-      --dark-primary-color: var(--paper-indigo-700);
-
-      --accent-color: var(--paper-pink-a200);
-      --light-accent-color: var(--paper-pink-a100);
-      --dark-accent-color: var(--paper-pink-a400);
-
-
-      /*
-       * Material Design Light background theme
-       */
-      --light-theme-background-color: #ffffff;
-      --light-theme-base-color: #000000;
-      --light-theme-text-color: var(--paper-grey-900);
-      --light-theme-secondary-color: #737373;  /* for secondary text and icons */
-      --light-theme-disabled-color: #9b9b9b;  /* disabled/hint text */
-      --light-theme-divider-color: #dbdbdb;
-
-      /*
-       * Material Design Dark background theme
-       */
-      --dark-theme-background-color: var(--paper-grey-900);
-      --dark-theme-base-color: #ffffff;
-      --dark-theme-text-color: #ffffff;
-      --dark-theme-secondary-color: #bcbcbc;  /* for secondary text and icons */
-      --dark-theme-disabled-color: #646464;  /* disabled/hint text */
-      --dark-theme-divider-color: #3c3c3c;
-
-      /*
-       * Deprecated values because of their confusing names.
-       */
-      --text-primary-color: var(--dark-theme-text-color);
-      --default-primary-color: var(--primary-color);
-    }
-  </style>
-</custom-style>`;
-  template$4.setAttribute('style', 'display: none;');
-  document.head.appendChild(template$4.content);
-
-  /**
-  @license
-  Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-  This code may only be used under the BSD style license found at
-  http://polymer.github.io/LICENSE.txt The complete set of authors may be found at
-  http://polymer.github.io/AUTHORS.txt The complete set of contributors may be
-  found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by Google as
-  part of the polymer project is also subject to an additional IP rights grant
-  found at http://polymer.github.io/PATENTS.txt
-  */
-  const template$5 = html$1`
-<custom-style>
-  <style is="custom-style">
-    html {
-      --paper-input-container-shared-input-style: {
-        position: relative; /* to make a stacking context */
-        outline: none;
-        box-shadow: none;
-        padding: 0;
-        margin: 0;
-        width: 100%;
-        max-width: 100%;
-        background: transparent;
-        border: none;
-        color: var(--paper-input-container-input-color, var(--primary-text-color));
-        -webkit-appearance: none;
-        text-align: inherit;
-        vertical-align: var(--paper-input-container-input-align, bottom);
-
-        @apply --paper-font-subhead;
-      };
-    }
-  </style>
-</custom-style>
-`;
-  template$5.setAttribute('style', 'display: none;');
-  document.head.appendChild(template$5.content);
-  /*
-  `<paper-input-container>` is a container for a `<label>`, an `<iron-input>` or
-  `<textarea>` and optional add-on elements such as an error message or character
-  counter, used to implement Material Design text fields.
-
-  For example:
-
-      <paper-input-container>
-        <label slot="label">Your name</label>
-        <iron-input slot="input">
-          <input>
-        </iron-input>
-        // In Polymer 1.0, you would use `<input is="iron-input" slot="input">`
-  instead of the above.
-      </paper-input-container>
-
-  You can style the nested `<input>` however you want; if you want it to look like
-  a Material Design input, you can style it with the
-  --paper-input-container-shared-input-style mixin.
-
-  Do not wrap `<paper-input-container>` around elements that already include it,
-  such as `<paper-input>`. Doing so may cause events to bounce infinitely between
-  the container and its contained element.
-
-  ### Listening for input changes
-
-  By default, it listens for changes on the `bind-value` attribute on its children
-  nodes and perform tasks such as auto-validating and label styling when the
-  `bind-value` changes. You can configure the attribute it listens to with the
-  `attr-for-value` attribute.
-
-  ### Using a custom input element
-
-  You can use a custom input element in a `<paper-input-container>`, for example
-  to implement a compound input field like a social security number input. The
-  custom input element should have the `paper-input-input` class, have a
-  `notify:true` value property and optionally implements
-  `Polymer.IronValidatableBehavior` if it is validatable.
-
-      <paper-input-container attr-for-value="ssn-value">
-        <label slot="label">Social security number</label>
-        <ssn-input slot="input" class="paper-input-input"></ssn-input>
-      </paper-input-container>
-
-
-  If you're using a `<paper-input-container>` imperatively, it's important to make
-  sure that you attach its children (the `iron-input` and the optional `label`)
-  before you attach the `<paper-input-container>` itself, so that it can be set up
-  correctly.
-
-  ### Validation
-
-  If the `auto-validate` attribute is set, the input container will validate the
-  input and update the container styling when the input value changes.
-
-  ### Add-ons
-
-  Add-ons are child elements of a `<paper-input-container>` with the `add-on`
-  attribute and implements the `Polymer.PaperInputAddonBehavior` behavior. They
-  are notified when the input value or validity changes, and may implement
-  functionality such as error messages or character counters. They appear at the
-  bottom of the input.
-
-  ### Prefixes and suffixes
-  These are child elements of a `<paper-input-container>` with the `prefix`
-  or `suffix` attribute, and are displayed inline with the input, before or after.
-
-      <paper-input-container>
-        <div slot="prefix">$</div>
-        <label slot="label">Total</label>
-        <iron-input slot="input">
-          <input>
-        </iron-input>
-        // In Polymer 1.0, you would use `<input is="iron-input" slot="input">`
-  instead of the above. <paper-icon-button slot="suffix"
-  icon="clear"></paper-icon-button>
-      </paper-input-container>
-
-  ### Styling
-
-  The following custom properties and mixins are available for styling:
-
-  Custom property | Description | Default
-  ----------------|-------------|----------
-  `--paper-input-container-color` | Label and underline color when the input is not focused | `--secondary-text-color`
-  `--paper-input-container-focus-color` | Label and underline color when the input is focused | `--primary-color`
-  `--paper-input-container-invalid-color` | Label and underline color when the input is is invalid | `--error-color`
-  `--paper-input-container-input-color` | Input foreground color | `--primary-text-color`
-  `--paper-input-container` | Mixin applied to the container | `{}`
-  `--paper-input-container-disabled` | Mixin applied to the container when it's disabled | `{}`
-  `--paper-input-container-label` | Mixin applied to the label | `{}`
-  `--paper-input-container-label-focus` | Mixin applied to the label when the input is focused | `{}`
-  `--paper-input-container-label-floating` | Mixin applied to the label when floating | `{}`
-  `--paper-input-container-input` | Mixin applied to the input | `{}`
-  `--paper-input-container-input-align` | The vertical-align property of the input | `bottom`
-  `--paper-input-container-input-disabled` | Mixin applied to the input when the component is disabled | `{}`
-  `--paper-input-container-input-focus` | Mixin applied to the input when focused | `{}`
-  `--paper-input-container-input-invalid` | Mixin applied to the input when invalid | `{}`
-  `--paper-input-container-input-webkit-spinner` | Mixin applied to the webkit spinner | `{}`
-  `--paper-input-container-input-webkit-clear` | Mixin applied to the webkit clear button | `{}`
-  `--paper-input-container-input-webkit-calendar-picker-indicator` | Mixin applied to the webkit calendar picker indicator | `{}`
-  `--paper-input-container-ms-clear` | Mixin applied to the Internet Explorer clear button | `{}`
-  `--paper-input-container-underline` | Mixin applied to the underline | `{}`
-  `--paper-input-container-underline-focus` | Mixin applied to the underline when the input is focused | `{}`
-  `--paper-input-container-underline-disabled` | Mixin applied to the underline when the input is disabled | `{}`
-  `--paper-input-prefix` | Mixin applied to the input prefix | `{}`
-  `--paper-input-suffix` | Mixin applied to the input suffix | `{}`
-
-  This element is `display:block` by default, but you can set the `inline`
-  attribute to make it `display:inline-block`.
-  */
-
-  Polymer({
-    /** @override */
-    _template: html$1`
-    <style>
-      :host {
-        display: block;
-        padding: 8px 0;
-        @apply --paper-input-container;
-      }
-
-      :host([inline]) {
-        display: inline-block;
-      }
-
-      :host([disabled]) {
-        pointer-events: none;
-        opacity: 0.33;
-
-        @apply --paper-input-container-disabled;
-      }
-
-      :host([hidden]) {
-        display: none !important;
-      }
-
-      [hidden] {
-        display: none !important;
-      }
-
-      .floated-label-placeholder {
-        @apply --paper-font-caption;
-      }
-
-      .underline {
-        height: 2px;
-        position: relative;
-      }
-
-      .focused-line {
-        @apply --layout-fit;
-        border-bottom: 2px solid var(--paper-input-container-focus-color, var(--primary-color));
-
-        -webkit-transform-origin: center center;
-        transform-origin: center center;
-        -webkit-transform: scale3d(0,1,1);
-        transform: scale3d(0,1,1);
-
-        @apply --paper-input-container-underline-focus;
-      }
-
-      .underline.is-highlighted .focused-line {
-        -webkit-transform: none;
-        transform: none;
-        -webkit-transition: -webkit-transform 0.25s;
-        transition: transform 0.25s;
-
-        @apply --paper-transition-easing;
-      }
-
-      .underline.is-invalid .focused-line {
-        border-color: var(--paper-input-container-invalid-color, var(--error-color));
-        -webkit-transform: none;
-        transform: none;
-        -webkit-transition: -webkit-transform 0.25s;
-        transition: transform 0.25s;
-
-        @apply --paper-transition-easing;
-      }
-
-      .unfocused-line {
-        @apply --layout-fit;
-        border-bottom: 1px solid var(--paper-input-container-color, var(--secondary-text-color));
-        @apply --paper-input-container-underline;
-      }
-
-      :host([disabled]) .unfocused-line {
-        border-bottom: 1px dashed;
-        border-color: var(--paper-input-container-color, var(--secondary-text-color));
-        @apply --paper-input-container-underline-disabled;
-      }
-
-      .input-wrapper {
-        @apply --layout-horizontal;
-        @apply --layout-center;
-        position: relative;
-      }
-
-      .input-content {
-        @apply --layout-flex-auto;
-        @apply --layout-relative;
-        max-width: 100%;
-      }
-
-      .input-content ::slotted(label),
-      .input-content ::slotted(.paper-input-label) {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        font: inherit;
-        color: var(--paper-input-container-color, var(--secondary-text-color));
-        -webkit-transition: -webkit-transform 0.25s, width 0.25s;
-        transition: transform 0.25s, width 0.25s;
-        -webkit-transform-origin: left top;
-        transform-origin: left top;
-        /* Fix for safari not focusing 0-height date/time inputs with -webkit-apperance: none; */
-        min-height: 1px;
-
-        @apply --paper-font-common-nowrap;
-        @apply --paper-font-subhead;
-        @apply --paper-input-container-label;
-        @apply --paper-transition-easing;
-      }
-
-      .input-content.label-is-floating ::slotted(label),
-      .input-content.label-is-floating ::slotted(.paper-input-label) {
-        -webkit-transform: translateY(-75%) scale(0.75);
-        transform: translateY(-75%) scale(0.75);
-
-        /* Since we scale to 75/100 of the size, we actually have 100/75 of the
-        original space now available */
-        width: 133%;
-
-        @apply --paper-input-container-label-floating;
-      }
-
-      :host(:dir(rtl)) .input-content.label-is-floating ::slotted(label),
-      :host(:dir(rtl)) .input-content.label-is-floating ::slotted(.paper-input-label) {
-        right: 0;
-        left: auto;
-        -webkit-transform-origin: right top;
-        transform-origin: right top;
-      }
-
-      .input-content.label-is-highlighted ::slotted(label),
-      .input-content.label-is-highlighted ::slotted(.paper-input-label) {
-        color: var(--paper-input-container-focus-color, var(--primary-color));
-
-        @apply --paper-input-container-label-focus;
-      }
-
-      .input-content.is-invalid ::slotted(label),
-      .input-content.is-invalid ::slotted(.paper-input-label) {
-        color: var(--paper-input-container-invalid-color, var(--error-color));
-      }
-
-      .input-content.label-is-hidden ::slotted(label),
-      .input-content.label-is-hidden ::slotted(.paper-input-label) {
-        visibility: hidden;
-      }
-
-      .input-content ::slotted(input),
-      .input-content ::slotted(iron-input),
-      .input-content ::slotted(textarea),
-      .input-content ::slotted(iron-autogrow-textarea),
-      .input-content ::slotted(.paper-input-input) {
-        @apply --paper-input-container-shared-input-style;
-        /* The apply shim doesn't apply the nested color custom property,
-          so we have to re-apply it here. */
-        color: var(--paper-input-container-input-color, var(--primary-text-color));
-        @apply --paper-input-container-input;
-      }
-
-      .input-content ::slotted(input)::-webkit-outer-spin-button,
-      .input-content ::slotted(input)::-webkit-inner-spin-button {
-        @apply --paper-input-container-input-webkit-spinner;
-      }
-
-      .input-content.focused ::slotted(input),
-      .input-content.focused ::slotted(iron-input),
-      .input-content.focused ::slotted(textarea),
-      .input-content.focused ::slotted(iron-autogrow-textarea),
-      .input-content.focused ::slotted(.paper-input-input) {
-        @apply --paper-input-container-input-focus;
-      }
-
-      .input-content.is-invalid ::slotted(input),
-      .input-content.is-invalid ::slotted(iron-input),
-      .input-content.is-invalid ::slotted(textarea),
-      .input-content.is-invalid ::slotted(iron-autogrow-textarea),
-      .input-content.is-invalid ::slotted(.paper-input-input) {
-        @apply --paper-input-container-input-invalid;
-      }
-
-      .prefix ::slotted(*) {
-        display: inline-block;
-        @apply --paper-font-subhead;
-        @apply --layout-flex-none;
-        @apply --paper-input-prefix;
-      }
-
-      .suffix ::slotted(*) {
-        display: inline-block;
-        @apply --paper-font-subhead;
-        @apply --layout-flex-none;
-
-        @apply --paper-input-suffix;
-      }
-
-      /* Firefox sets a min-width on the input, which can cause layout issues */
-      .input-content ::slotted(input) {
-        min-width: 0;
-      }
-
-      .input-content ::slotted(textarea) {
-        resize: none;
-      }
-
-      .add-on-content {
-        position: relative;
-      }
-
-      .add-on-content.is-invalid ::slotted(*) {
-        color: var(--paper-input-container-invalid-color, var(--error-color));
-      }
-
-      .add-on-content.is-highlighted ::slotted(*) {
-        color: var(--paper-input-container-focus-color, var(--primary-color));
-      }
-    </style>
-
-    <div class="floated-label-placeholder" aria-hidden="true" hidden="[[noLabelFloat]]">&nbsp;</div>
-
-    <div class="input-wrapper">
-      <span class="prefix"><slot name="prefix"></slot></span>
-
-      <div class$="[[_computeInputContentClass(noLabelFloat,alwaysFloatLabel,focused,invalid,_inputHasContent)]]" id="labelAndInputContainer">
-        <slot name="label"></slot>
-        <slot name="input"></slot>
-      </div>
-
-      <span class="suffix"><slot name="suffix"></slot></span>
-    </div>
-
-    <div class$="[[_computeUnderlineClass(focused,invalid)]]">
-      <div class="unfocused-line"></div>
-      <div class="focused-line"></div>
-    </div>
-
-    <div class$="[[_computeAddOnContentClass(focused,invalid)]]">
-      <slot name="add-on"></slot>
-    </div>
-`,
-    is: 'paper-input-container',
-    properties: {
-      /**
-       * Set to true to disable the floating label. The label disappears when the
-       * input value is not null.
-       */
-      noLabelFloat: {
-        type: Boolean,
-        value: false
-      },
-
-      /**
-       * Set to true to always float the floating label.
-       */
-      alwaysFloatLabel: {
-        type: Boolean,
-        value: false
-      },
-
-      /**
-       * The attribute to listen for value changes on.
-       */
-      attrForValue: {
-        type: String,
-        value: 'bind-value'
-      },
-
-      /**
-       * Set to true to auto-validate the input value when it changes.
-       */
-      autoValidate: {
-        type: Boolean,
-        value: false
-      },
-
-      /**
-       * True if the input is invalid. This property is set automatically when the
-       * input value changes if auto-validating, or when the `iron-input-validate`
-       * event is heard from a child.
-       */
-      invalid: {
-        observer: '_invalidChanged',
-        type: Boolean,
-        value: false
-      },
-
-      /**
-       * True if the input has focus.
-       */
-      focused: {
-        readOnly: true,
-        type: Boolean,
-        value: false,
-        notify: true
-      },
-      _addons: {
-        type: Array // do not set a default value here intentionally - it will be initialized
-        // lazily when a distributed child is attached, which may occur before
-        // configuration for this element in polyfill.
-
-      },
-      _inputHasContent: {
-        type: Boolean,
-        value: false
-      },
-      _inputSelector: {
-        type: String,
-        value: 'input,iron-input,textarea,.paper-input-input'
-      },
-      _boundOnFocus: {
-        type: Function,
-        value: function () {
-          return this._onFocus.bind(this);
-        }
-      },
-      _boundOnBlur: {
-        type: Function,
-        value: function () {
-          return this._onBlur.bind(this);
-        }
-      },
-      _boundOnInput: {
-        type: Function,
-        value: function () {
-          return this._onInput.bind(this);
-        }
-      },
-      _boundValueChanged: {
-        type: Function,
-        value: function () {
-          return this._onValueChanged.bind(this);
-        }
-      }
-    },
-    listeners: {
-      'addon-attached': '_onAddonAttached',
-      'iron-input-validate': '_onIronInputValidate'
-    },
-
-    get _valueChangedEvent() {
-      return this.attrForValue + '-changed';
-    },
-
-    get _propertyForValue() {
-      return dashToCamelCase(this.attrForValue);
-    },
-
-    get _inputElement() {
-      return dom(this).querySelector(this._inputSelector);
-    },
-
-    get _inputElementValue() {
-      return this._inputElement[this._propertyForValue] || this._inputElement.value;
-    },
-
-    /** @override */
-    ready: function () {
-      // Paper-input treats a value of undefined differently at startup than
-      // the rest of the time (specifically: it does not validate it at startup,
-      // but it does after that. We need to track whether the first time we
-      // encounter the value is basically this first time, so that we can validate
-      // it correctly the rest of the time. See
-      // https://github.com/PolymerElements/paper-input/issues/605
-      this.__isFirstValueUpdate = true;
-
-      if (!this._addons) {
-        this._addons = [];
-      }
-
-      this.addEventListener('focus', this._boundOnFocus, true);
-      this.addEventListener('blur', this._boundOnBlur, true);
-    },
-
-    /** @override */
-    attached: function () {
-      if (this.attrForValue) {
-        this._inputElement.addEventListener(this._valueChangedEvent, this._boundValueChanged);
-      } else {
-        this.addEventListener('input', this._onInput);
-      } // Only validate when attached if the input already has a value.
-
-
-      if (this._inputElementValue && this._inputElementValue != '') {
-        this._handleValueAndAutoValidate(this._inputElement);
-      } else {
-        this._handleValue(this._inputElement);
-      }
-    },
-
-    /** @private */
-    _onAddonAttached: function (event) {
-      if (!this._addons) {
-        this._addons = [];
-      }
-
-      var target = event.target;
-
-      if (this._addons.indexOf(target) === -1) {
-        this._addons.push(target);
-
-        if (this.isAttached) {
-          this._handleValue(this._inputElement);
-        }
-      }
-    },
-
-    /** @private */
-    _onFocus: function () {
-      this._setFocused(true);
-    },
-
-    /** @private */
-    _onBlur: function () {
-      this._setFocused(false);
-
-      this._handleValueAndAutoValidate(this._inputElement);
-    },
-
-    /** @private */
-    _onInput: function (event) {
-      this._handleValueAndAutoValidate(event.target);
-    },
-
-    /** @private */
-    _onValueChanged: function (event) {
-      var input = event.target; // Paper-input treats a value of undefined differently at startup than
-      // the rest of the time (specifically: it does not validate it at startup,
-      // but it does after that. If this is in fact the bootup case, ignore
-      // validation, just this once.
-
-      if (this.__isFirstValueUpdate) {
-        this.__isFirstValueUpdate = false;
-
-        if (input.value === undefined || input.value === '') {
-          return;
-        }
-      }
-
-      this._handleValueAndAutoValidate(event.target);
-    },
-
-    /** @private */
-    _handleValue: function (inputElement) {
-      var value = this._inputElementValue; // type="number" hack needed because this.value is empty until it's valid
-
-      if (value || value === 0 || inputElement.type === 'number' && !inputElement.checkValidity()) {
-        this._inputHasContent = true;
-      } else {
-        this._inputHasContent = false;
-      }
-
-      this.updateAddons({
-        inputElement: inputElement,
-        value: value,
-        invalid: this.invalid
-      });
-    },
-
-    /** @private */
-    _handleValueAndAutoValidate: function (inputElement) {
-      if (this.autoValidate && inputElement) {
-        var valid;
-
-        if (inputElement.validate) {
-          valid = inputElement.validate(this._inputElementValue);
-        } else {
-          valid = inputElement.checkValidity();
-        }
-
-        this.invalid = !valid;
-      } // Call this last to notify the add-ons.
-
-
-      this._handleValue(inputElement);
-    },
-
-    /** @private */
-    _onIronInputValidate: function (event) {
-      this.invalid = this._inputElement.invalid;
-    },
-
-    /** @private */
-    _invalidChanged: function () {
-      if (this._addons) {
-        this.updateAddons({
-          invalid: this.invalid
-        });
-      }
-    },
-
-    /**
-     * Call this to update the state of add-ons.
-     * @param {Object} state Add-on state.
-     */
-    updateAddons: function (state) {
-      for (var addon, index = 0; addon = this._addons[index]; index++) {
-        addon.update(state);
-      }
-    },
-
-    /** @private */
-    _computeInputContentClass: function (noLabelFloat, alwaysFloatLabel, focused, invalid, _inputHasContent) {
-      var cls = 'input-content';
-
-      if (!noLabelFloat) {
-        var label = this.querySelector('label');
-
-        if (alwaysFloatLabel || _inputHasContent) {
-          cls += ' label-is-floating'; // If the label is floating, ignore any offsets that may have been
-          // applied from a prefix element.
-
-          this.$.labelAndInputContainer.style.position = 'static';
-
-          if (invalid) {
-            cls += ' is-invalid';
-          } else if (focused) {
-            cls += ' label-is-highlighted';
-          }
-        } else {
-          // When the label is not floating, it should overlap the input element.
-          if (label) {
-            this.$.labelAndInputContainer.style.position = 'relative';
-          }
-
-          if (invalid) {
-            cls += ' is-invalid';
-          }
-        }
-      } else {
-        if (_inputHasContent) {
-          cls += ' label-is-hidden';
-        }
-
-        if (invalid) {
-          cls += ' is-invalid';
-        }
-      }
-
-      if (focused) {
-        cls += ' focused';
-      }
-
-      return cls;
-    },
-
-    /** @private */
-    _computeUnderlineClass: function (focused, invalid) {
-      var cls = 'underline';
-
-      if (invalid) {
-        cls += ' is-invalid';
-      } else if (focused) {
-        cls += ' is-highlighted';
-      }
-
-      return cls;
-    },
-
-    /** @private */
-    _computeAddOnContentClass: function (focused, invalid) {
-      var cls = 'add-on-content';
-
-      if (invalid) {
-        cls += ' is-invalid';
-      } else if (focused) {
-        cls += ' is-highlighted';
-      }
-
-      return cls;
-    }
-  });
-
-  /**
-  @license
-  Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-  This code may only be used under the BSD style license found at
-  http://polymer.github.io/LICENSE.txt The complete set of authors may be found at
-  http://polymer.github.io/AUTHORS.txt The complete set of contributors may be
-  found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by Google as
-  part of the polymer project is also subject to an additional IP rights grant
-  found at http://polymer.github.io/PATENTS.txt
-  */
-  /*
-  `<paper-input-error>` is an error message for use with
-  `<paper-input-container>`. The error is displayed when the
-  `<paper-input-container>` is `invalid`.
-
-      <paper-input-container>
-        <input pattern="[0-9]*">
-        <paper-input-error slot="add-on">Only numbers are
-  allowed!</paper-input-error>
-      </paper-input-container>
-
-  ### Styling
-
-  The following custom properties and mixins are available for styling:
-
-  Custom property | Description | Default
-  ----------------|-------------|----------
-  `--paper-input-container-invalid-color` | The foreground color of the error | `--error-color`
-  `--paper-input-error` | Mixin applied to the error | `{}`
-  */
-
-  Polymer({
-    /** @override */
-    _template: html$1`
-    <style>
-      :host {
-        display: inline-block;
-        visibility: hidden;
-
-        color: var(--paper-input-container-invalid-color, var(--error-color));
-
-        @apply --paper-font-caption;
-        @apply --paper-input-error;
-        position: absolute;
-        left:0;
-        right:0;
-      }
-
-      :host([invalid]) {
-        visibility: visible;
-      }
-
-      #a11yWrapper {
-        visibility: hidden;
-      }
-
-      :host([invalid]) #a11yWrapper {
-        visibility: visible;
-      }
-    </style>
-
-    <!--
-    If the paper-input-error element is directly referenced by an
-    \`aria-describedby\` attribute, such as when used as a paper-input add-on,
-    then applying \`visibility: hidden;\` to the paper-input-error element itself
-    does not hide the error.
-
-    For more information, see:
-    https://www.w3.org/TR/accname-1.1/#mapping_additional_nd_description
-    -->
-    <div id="a11yWrapper">
-      <slot></slot>
-    </div>
-`,
-    is: 'paper-input-error',
-    behaviors: [PaperInputAddonBehavior],
-    properties: {
-      /**
-       * True if the error is showing.
-       */
-      invalid: {
-        readOnly: true,
-        reflectToAttribute: true,
-        type: Boolean
-      }
-    },
-
-    /**
-     * This overrides the update function in PaperInputAddonBehavior.
-     * @param {{
-     *   inputElement: (Element|undefined),
-     *   value: (string|undefined),
-     *   invalid: boolean
-     * }} state -
-     *     inputElement: The input element.
-     *     value: The input value.
-     *     invalid: True if the input value is invalid.
-     */
-    update: function (state) {
-      this._setInvalid(state.invalid);
-    }
-  });
-
-  /**
-  @license
-  Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-  This code may only be used under the BSD style license found at
-  http://polymer.github.io/LICENSE.txt The complete set of authors may be found at
-  http://polymer.github.io/AUTHORS.txt The complete set of contributors may be
-  found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by Google as
-  part of the polymer project is also subject to an additional IP rights grant
-  found at http://polymer.github.io/PATENTS.txt
-  */
-  /**
-    IronFormElementBehavior adds a `name`, `value` and `required` properties to
-    a custom element. It mostly exists for backcompatibility with Polymer 1.x, and
-    is probably not something you want to use.
-
-    @demo demo/index.html
-    @polymerBehavior
-   */
-
-  const IronFormElementBehavior = {
-    properties: {
-      /**
-       * The name of this element.
-       */
-      name: {
-        type: String
-      },
-
-      /**
-       * The value for this element.
-       * @type {*}
-       */
-      value: {
-        notify: true,
-        type: String
-      },
-
-      /**
-       * Set to true to mark the input as required. If used in a form, a
-       * custom element that uses this behavior should also use
-       * IronValidatableBehavior and define a custom validation method.
-       * Otherwise, a `required` element will always be considered valid.
-       * It's also strongly recommended to provide a visual style for the element
-       * when its value is invalid.
-       */
-      required: {
-        type: Boolean,
-        value: false
-      }
-    },
-    // Empty implementations for backcompatibility.
-    attached: function () {},
-    detached: function () {}
-  };
-
-  /**
-  @license
-  Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-  This code may only be used under the BSD style license found at
-  http://polymer.github.io/LICENSE.txt The complete set of authors may be found at
-  http://polymer.github.io/AUTHORS.txt The complete set of contributors may be
-  found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by Google as
-  part of the polymer project is also subject to an additional IP rights grant
-  found at http://polymer.github.io/PATENTS.txt
-  */
-  /**
-   * Chrome uses an older version of DOM Level 3 Keyboard Events
-   *
-   * Most keys are labeled as text, but some are Unicode codepoints.
-   * Values taken from:
-   * http://www.w3.org/TR/2007/WD-DOM-Level-3-Events-20071221/keyset.html#KeySet-Set
-   */
-
-  var KEY_IDENTIFIER = {
-    'U+0008': 'backspace',
-    'U+0009': 'tab',
-    'U+001B': 'esc',
-    'U+0020': 'space',
-    'U+007F': 'del'
-  };
-  /**
-   * Special table for KeyboardEvent.keyCode.
-   * KeyboardEvent.keyIdentifier is better, and KeyBoardEvent.key is even better
-   * than that.
-   *
-   * Values from:
-   * https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent.keyCode#Value_of_keyCode
-   */
-
-  var KEY_CODE = {
-    8: 'backspace',
-    9: 'tab',
-    13: 'enter',
-    27: 'esc',
-    33: 'pageup',
-    34: 'pagedown',
-    35: 'end',
-    36: 'home',
-    32: 'space',
-    37: 'left',
-    38: 'up',
-    39: 'right',
-    40: 'down',
-    46: 'del',
-    106: '*'
-  };
-  /**
-   * MODIFIER_KEYS maps the short name for modifier keys used in a key
-   * combo string to the property name that references those same keys
-   * in a KeyboardEvent instance.
-   */
-
-  var MODIFIER_KEYS = {
-    'shift': 'shiftKey',
-    'ctrl': 'ctrlKey',
-    'alt': 'altKey',
-    'meta': 'metaKey'
-  };
-  /**
-   * KeyboardEvent.key is mostly represented by printable character made by
-   * the keyboard, with unprintable keys labeled nicely.
-   *
-   * However, on OS X, Alt+char can make a Unicode character that follows an
-   * Apple-specific mapping. In this case, we fall back to .keyCode.
-   */
-
-  var KEY_CHAR = /[a-z0-9*]/;
-  /**
-   * Matches a keyIdentifier string.
-   */
-
-  var IDENT_CHAR = /U\+/;
-  /**
-   * Matches arrow keys in Gecko 27.0+
-   */
-
-  var ARROW_KEY = /^arrow/;
-  /**
-   * Matches space keys everywhere (notably including IE10's exceptional name
-   * `spacebar`).
-   */
-
-  var SPACE_KEY = /^space(bar)?/;
-  /**
-   * Matches ESC key.
-   *
-   * Value from: http://w3c.github.io/uievents-key/#key-Escape
-   */
-
-  var ESC_KEY = /^escape$/;
-  /**
-   * Transforms the key.
-   * @param {string} key The KeyBoardEvent.key
-   * @param {Boolean} [noSpecialChars] Limits the transformation to
-   * alpha-numeric characters.
-   */
-
-  function transformKey(key, noSpecialChars) {
-    var validKey = '';
-
-    if (key) {
-      var lKey = key.toLowerCase();
-
-      if (lKey === ' ' || SPACE_KEY.test(lKey)) {
-        validKey = 'space';
-      } else if (ESC_KEY.test(lKey)) {
-        validKey = 'esc';
-      } else if (lKey.length == 1) {
-        if (!noSpecialChars || KEY_CHAR.test(lKey)) {
-          validKey = lKey;
-        }
-      } else if (ARROW_KEY.test(lKey)) {
-        validKey = lKey.replace('arrow', '');
-      } else if (lKey == 'multiply') {
-        // numpad '*' can map to Multiply on IE/Windows
-        validKey = '*';
-      } else {
-        validKey = lKey;
-      }
-    }
-
-    return validKey;
-  }
-
-  function transformKeyIdentifier(keyIdent) {
-    var validKey = '';
-
-    if (keyIdent) {
-      if (keyIdent in KEY_IDENTIFIER) {
-        validKey = KEY_IDENTIFIER[keyIdent];
-      } else if (IDENT_CHAR.test(keyIdent)) {
-        keyIdent = parseInt(keyIdent.replace('U+', '0x'), 16);
-        validKey = String.fromCharCode(keyIdent).toLowerCase();
-      } else {
-        validKey = keyIdent.toLowerCase();
-      }
-    }
-
-    return validKey;
-  }
-
-  function transformKeyCode(keyCode) {
-    var validKey = '';
-
-    if (Number(keyCode)) {
-      if (keyCode >= 65 && keyCode <= 90) {
-        // ascii a-z
-        // lowercase is 32 offset from uppercase
-        validKey = String.fromCharCode(32 + keyCode);
-      } else if (keyCode >= 112 && keyCode <= 123) {
-        // function keys f1-f12
-        validKey = 'f' + (keyCode - 112 + 1);
-      } else if (keyCode >= 48 && keyCode <= 57) {
-        // top 0-9 keys
-        validKey = String(keyCode - 48);
-      } else if (keyCode >= 96 && keyCode <= 105) {
-        // num pad 0-9
-        validKey = String(keyCode - 96);
-      } else {
-        validKey = KEY_CODE[keyCode];
-      }
-    }
-
-    return validKey;
-  }
-  /**
-   * Calculates the normalized key for a KeyboardEvent.
-   * @param {KeyboardEvent} keyEvent
-   * @param {Boolean} [noSpecialChars] Set to true to limit keyEvent.key
-   * transformation to alpha-numeric chars. This is useful with key
-   * combinations like shift + 2, which on FF for MacOS produces
-   * keyEvent.key = @
-   * To get 2 returned, set noSpecialChars = true
-   * To get @ returned, set noSpecialChars = false
-   */
-
-
-  function normalizedKeyForEvent(keyEvent, noSpecialChars) {
-    // Fall back from .key, to .detail.key for artifical keyboard events,
-    // and then to deprecated .keyIdentifier and .keyCode.
-    if (keyEvent.key) {
-      return transformKey(keyEvent.key, noSpecialChars);
-    }
-
-    if (keyEvent.detail && keyEvent.detail.key) {
-      return transformKey(keyEvent.detail.key, noSpecialChars);
-    }
-
-    return transformKeyIdentifier(keyEvent.keyIdentifier) || transformKeyCode(keyEvent.keyCode) || '';
-  }
-
-  function keyComboMatchesEvent(keyCombo, event) {
-    // For combos with modifiers we support only alpha-numeric keys
-    var keyEvent = normalizedKeyForEvent(event, keyCombo.hasModifiers);
-    return keyEvent === keyCombo.key && (!keyCombo.hasModifiers || !!event.shiftKey === !!keyCombo.shiftKey && !!event.ctrlKey === !!keyCombo.ctrlKey && !!event.altKey === !!keyCombo.altKey && !!event.metaKey === !!keyCombo.metaKey);
-  }
-
-  function parseKeyComboString(keyComboString) {
-    if (keyComboString.length === 1) {
-      return {
-        combo: keyComboString,
-        key: keyComboString,
-        event: 'keydown'
-      };
-    }
-
-    return keyComboString.split('+').reduce(function (parsedKeyCombo, keyComboPart) {
-      var eventParts = keyComboPart.split(':');
-      var keyName = eventParts[0];
-      var event = eventParts[1];
-
-      if (keyName in MODIFIER_KEYS) {
-        parsedKeyCombo[MODIFIER_KEYS[keyName]] = true;
-        parsedKeyCombo.hasModifiers = true;
-      } else {
-        parsedKeyCombo.key = keyName;
-        parsedKeyCombo.event = event || 'keydown';
-      }
-
-      return parsedKeyCombo;
-    }, {
-      combo: keyComboString.split(':').shift()
-    });
-  }
-
-  function parseEventString(eventString) {
-    return eventString.trim().split(' ').map(function (keyComboString) {
-      return parseKeyComboString(keyComboString);
-    });
-  }
-  /**
-   * `Polymer.IronA11yKeysBehavior` provides a normalized interface for processing
-   * keyboard commands that pertain to [WAI-ARIA best
-   * practices](http://www.w3.org/TR/wai-aria-practices/#kbd_general_binding). The
-   * element takes care of browser differences with respect to Keyboard events and
-   * uses an expressive syntax to filter key presses.
-   *
-   * Use the `keyBindings` prototype property to express what combination of keys
-   * will trigger the callback. A key binding has the format
-   * `"KEY+MODIFIER:EVENT": "callback"` (`"KEY": "callback"` or
-   * `"KEY:EVENT": "callback"` are valid as well). Some examples:
-   *
-   *      keyBindings: {
-   *        'space': '_onKeydown', // same as 'space:keydown'
-   *        'shift+tab': '_onKeydown',
-   *        'enter:keypress': '_onKeypress',
-   *        'esc:keyup': '_onKeyup'
-   *      }
-   *
-   * The callback will receive with an event containing the following information
-   * in `event.detail`:
-   *
-   *      _onKeydown: function(event) {
-   *        console.log(event.detail.combo); // KEY+MODIFIER, e.g. "shift+tab"
-   *        console.log(event.detail.key); // KEY only, e.g. "tab"
-   *        console.log(event.detail.event); // EVENT, e.g. "keydown"
-   *        console.log(event.detail.keyboardEvent); // the original KeyboardEvent
-   *      }
-   *
-   * Use the `keyEventTarget` attribute to set up event handlers on a specific
-   * node.
-   *
-   * See the [demo source
-   * code](https://github.com/PolymerElements/iron-a11y-keys-behavior/blob/master/demo/x-key-aware.html)
-   * for an example.
-   *
-   * @demo demo/index.html
-   * @polymerBehavior
-   */
-
-
-  const IronA11yKeysBehavior = {
-    properties: {
-      /**
-       * The EventTarget that will be firing relevant KeyboardEvents. Set it to
-       * `null` to disable the listeners.
-       * @type {?EventTarget}
-       */
-      keyEventTarget: {
-        type: Object,
-        value: function () {
-          return this;
-        }
-      },
-
-      /**
-       * If true, this property will cause the implementing element to
-       * automatically stop propagation on any handled KeyboardEvents.
-       */
-      stopKeyboardEventPropagation: {
-        type: Boolean,
-        value: false
-      },
-      _boundKeyHandlers: {
-        type: Array,
-        value: function () {
-          return [];
-        }
-      },
-      // We use this due to a limitation in IE10 where instances will have
-      // own properties of everything on the "prototype".
-      _imperativeKeyBindings: {
-        type: Object,
-        value: function () {
-          return {};
-        }
-      }
-    },
-    observers: ['_resetKeyEventListeners(keyEventTarget, _boundKeyHandlers)'],
-
-    /**
-     * To be used to express what combination of keys  will trigger the relative
-     * callback. e.g. `keyBindings: { 'esc': '_onEscPressed'}`
-     * @type {!Object}
-     */
-    keyBindings: {},
-    registered: function () {
-      this._prepKeyBindings();
-    },
-    attached: function () {
-      this._listenKeyEventListeners();
-    },
-    detached: function () {
-      this._unlistenKeyEventListeners();
-    },
-
-    /**
-     * Can be used to imperatively add a key binding to the implementing
-     * element. This is the imperative equivalent of declaring a keybinding
-     * in the `keyBindings` prototype property.
-     *
-     * @param {string} eventString
-     * @param {string} handlerName
-     */
-    addOwnKeyBinding: function (eventString, handlerName) {
-      this._imperativeKeyBindings[eventString] = handlerName;
-
-      this._prepKeyBindings();
-
-      this._resetKeyEventListeners();
-    },
-
-    /**
-     * When called, will remove all imperatively-added key bindings.
-     */
-    removeOwnKeyBindings: function () {
-      this._imperativeKeyBindings = {};
-
-      this._prepKeyBindings();
-
-      this._resetKeyEventListeners();
-    },
-
-    /**
-     * Returns true if a keyboard event matches `eventString`.
-     *
-     * @param {KeyboardEvent} event
-     * @param {string} eventString
-     * @return {boolean}
-     */
-    keyboardEventMatchesKeys: function (event, eventString) {
-      var keyCombos = parseEventString(eventString);
-
-      for (var i = 0; i < keyCombos.length; ++i) {
-        if (keyComboMatchesEvent(keyCombos[i], event)) {
-          return true;
-        }
-      }
-
-      return false;
-    },
-    _collectKeyBindings: function () {
-      var keyBindings = this.behaviors.map(function (behavior) {
-        return behavior.keyBindings;
-      });
-
-      if (keyBindings.indexOf(this.keyBindings) === -1) {
-        keyBindings.push(this.keyBindings);
-      }
-
-      return keyBindings;
-    },
-    _prepKeyBindings: function () {
-      this._keyBindings = {};
-
-      this._collectKeyBindings().forEach(function (keyBindings) {
-        for (var eventString in keyBindings) {
-          this._addKeyBinding(eventString, keyBindings[eventString]);
-        }
-      }, this);
-
-      for (var eventString in this._imperativeKeyBindings) {
-        this._addKeyBinding(eventString, this._imperativeKeyBindings[eventString]);
-      } // Give precedence to combos with modifiers to be checked first.
-
-
-      for (var eventName in this._keyBindings) {
-        this._keyBindings[eventName].sort(function (kb1, kb2) {
-          var b1 = kb1[0].hasModifiers;
-          var b2 = kb2[0].hasModifiers;
-          return b1 === b2 ? 0 : b1 ? -1 : 1;
-        });
-      }
-    },
-    _addKeyBinding: function (eventString, handlerName) {
-      parseEventString(eventString).forEach(function (keyCombo) {
-        this._keyBindings[keyCombo.event] = this._keyBindings[keyCombo.event] || [];
-
-        this._keyBindings[keyCombo.event].push([keyCombo, handlerName]);
-      }, this);
-    },
-    _resetKeyEventListeners: function () {
-      this._unlistenKeyEventListeners();
-
-      if (this.isAttached) {
-        this._listenKeyEventListeners();
-      }
-    },
-    _listenKeyEventListeners: function () {
-      if (!this.keyEventTarget) {
-        return;
-      }
-
-      Object.keys(this._keyBindings).forEach(function (eventName) {
-        var keyBindings = this._keyBindings[eventName];
-
-        var boundKeyHandler = this._onKeyBindingEvent.bind(this, keyBindings);
-
-        this._boundKeyHandlers.push([this.keyEventTarget, eventName, boundKeyHandler]);
-
-        this.keyEventTarget.addEventListener(eventName, boundKeyHandler);
-      }, this);
-    },
-    _unlistenKeyEventListeners: function () {
-      var keyHandlerTuple;
-      var keyEventTarget;
-      var eventName;
-      var boundKeyHandler;
-
-      while (this._boundKeyHandlers.length) {
-        // My kingdom for block-scope binding and destructuring assignment..
-        keyHandlerTuple = this._boundKeyHandlers.pop();
-        keyEventTarget = keyHandlerTuple[0];
-        eventName = keyHandlerTuple[1];
-        boundKeyHandler = keyHandlerTuple[2];
-        keyEventTarget.removeEventListener(eventName, boundKeyHandler);
-      }
-    },
-    _onKeyBindingEvent: function (keyBindings, event) {
-      if (this.stopKeyboardEventPropagation) {
-        event.stopPropagation();
-      } // if event has been already prevented, don't do anything
-
-
-      if (event.defaultPrevented) {
-        return;
-      }
-
-      for (var i = 0; i < keyBindings.length; i++) {
-        var keyCombo = keyBindings[i][0];
-        var handlerName = keyBindings[i][1];
-
-        if (keyComboMatchesEvent(keyCombo, event)) {
-          this._triggerKeyHandler(keyCombo, handlerName, event); // exit the loop if eventDefault was prevented
-
-
-          if (event.defaultPrevented) {
-            return;
-          }
-        }
-      }
-    },
-    _triggerKeyHandler: function (keyCombo, handlerName, keyboardEvent) {
-      var detail = Object.create(keyCombo);
-      detail.keyboardEvent = keyboardEvent;
-      var event = new CustomEvent(keyCombo.event, {
-        detail: detail,
-        cancelable: true
-      });
-      this[handlerName].call(this, event);
-
-      if (event.defaultPrevented) {
-        keyboardEvent.preventDefault();
-      }
-    }
-  };
-
-  /**
-  @license
-  Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-  This code may only be used under the BSD style license found at
-  http://polymer.github.io/LICENSE.txt The complete set of authors may be found at
-  http://polymer.github.io/AUTHORS.txt The complete set of contributors may be
-  found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by Google as
-  part of the polymer project is also subject to an additional IP rights grant
-  found at http://polymer.github.io/PATENTS.txt
-  */
-  /**
-   * @demo demo/index.html
-   * @polymerBehavior
-   */
-
-  const IronControlState = {
-    properties: {
-      /**
-       * If true, the element currently has focus.
-       */
-      focused: {
-        type: Boolean,
-        value: false,
-        notify: true,
-        readOnly: true,
-        reflectToAttribute: true
-      },
-
-      /**
-       * If true, the user cannot interact with this element.
-       */
-      disabled: {
-        type: Boolean,
-        value: false,
-        notify: true,
-        observer: '_disabledChanged',
-        reflectToAttribute: true
-      },
-
-      /**
-       * Value of the `tabindex` attribute before `disabled` was activated.
-       * `null` means the attribute was not present.
-       * @type {?string|undefined}
-       */
-      _oldTabIndex: {
-        type: String
-      },
-      _boundFocusBlurHandler: {
-        type: Function,
-        value: function () {
-          return this._focusBlurHandler.bind(this);
-        }
-      }
-    },
-    observers: ['_changedControlState(focused, disabled)'],
-
-    /**
-     * @return {void}
-     */
-    ready: function () {
-      this.addEventListener('focus', this._boundFocusBlurHandler, true);
-      this.addEventListener('blur', this._boundFocusBlurHandler, true);
-    },
-    _focusBlurHandler: function (event) {
-      // Polymer takes care of retargeting events.
-      this._setFocused(event.type === 'focus');
-
-      return;
-    },
-    _disabledChanged: function (disabled, old) {
-      this.setAttribute('aria-disabled', disabled ? 'true' : 'false');
-      this.style.pointerEvents = disabled ? 'none' : '';
-
-      if (disabled) {
-        // Read the `tabindex` attribute instead of the `tabIndex` property.
-        // The property returns `-1` if there is no `tabindex` attribute.
-        // This distinction is important when restoring the value because
-        // leaving `-1` hides shadow root children from the tab order.
-        this._oldTabIndex = this.getAttribute('tabindex');
-
-        this._setFocused(false);
-
-        this.tabIndex = -1;
-        this.blur();
-      } else if (this._oldTabIndex !== undefined) {
-        if (this._oldTabIndex === null) {
-          this.removeAttribute('tabindex');
-        } else {
-          this.setAttribute('tabindex', this._oldTabIndex);
-        }
-      }
-    },
-    _changedControlState: function () {
-      // _controlStateChanged is abstract, follow-on behaviors may implement it
-      if (this._controlStateChanged) {
-        this._controlStateChanged();
-      }
-    }
-  };
-
-  /**
-  @license
-  Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-  This code may only be used under the BSD style license found at
-  http://polymer.github.io/LICENSE.txt The complete set of authors may be found at
-  http://polymer.github.io/AUTHORS.txt The complete set of contributors may be
-  found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by Google as
-  part of the polymer project is also subject to an additional IP rights grant
-  found at http://polymer.github.io/PATENTS.txt
-  */
-  // aria-labelledby) and add-ons.
-
-  const PaperInputHelper = {};
-  PaperInputHelper.NextLabelID = 1;
-  PaperInputHelper.NextAddonID = 1;
-  PaperInputHelper.NextInputID = 1;
-  /**
-   * Use `PaperInputBehavior` to implement inputs with `<paper-input-container>`.
-   * This behavior is implemented by `<paper-input>`. It exposes a number of
-   * properties from `<paper-input-container>` and `<input is="iron-input">` and
-   * they should be bound in your template.
-   *
-   * The input element can be accessed by the `inputElement` property if you need
-   * to access properties or methods that are not exposed.
-   * @polymerBehavior PaperInputBehavior
-   */
-
-  const PaperInputBehaviorImpl = {
-    properties: {
-      /**
-       * Fired when the input changes due to user interaction.
-       *
-       * @event change
-       */
-
-      /**
-       * The label for this input. If you're using PaperInputBehavior to
-       * implement your own paper-input-like element, bind this to
-       * `<label>`'s content and `hidden` property, e.g.
-       * `<label hidden$="[[!label]]">[[label]]</label>` in your `template`
-       */
-      label: {
-        type: String
-      },
-
-      /**
-       * The value for this input. If you're using PaperInputBehavior to
-       * implement your own paper-input-like element, bind this to
-       * the `<iron-input>`'s `bindValue`
-       * property, or the value property of your input that is `notify:true`.
-       * @type {*}
-       */
-      value: {
-        notify: true,
-        type: String
-      },
-
-      /**
-       * Set to true to disable this input. If you're using PaperInputBehavior to
-       * implement your own paper-input-like element, bind this to
-       * both the `<paper-input-container>`'s and the input's `disabled` property.
-       */
-      disabled: {
-        type: Boolean,
-        value: false
-      },
-
-      /**
-       * Returns true if the value is invalid. If you're using PaperInputBehavior
-       * to implement your own paper-input-like element, bind this to both the
-       * `<paper-input-container>`'s and the input's `invalid` property.
-       *
-       * If `autoValidate` is true, the `invalid` attribute is managed
-       * automatically, which can clobber attempts to manage it manually.
-       */
-      invalid: {
-        type: Boolean,
-        value: false,
-        notify: true
-      },
-
-      /**
-       * Set this to specify the pattern allowed by `preventInvalidInput`. If
-       * you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the `<input is="iron-input">`'s `allowedPattern`
-       * property.
-       */
-      allowedPattern: {
-        type: String
-      },
-
-      /**
-       * The type of the input. The supported types are the
-       * [native input's
-       * types](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#Form_<input>_types).
-       * If you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the (Polymer 1) `<input is="iron-input">`'s or
-       * (Polymer 2)
-       * `<iron-input>`'s `type` property.
-       */
-      type: {
-        type: String
-      },
-
-      /**
-       * The datalist of the input (if any). This should match the id of an
-       * existing `<datalist>`. If you're using PaperInputBehavior to implement
-       * your own paper-input-like element, bind this to the `<input
-       * is="iron-input">`'s `list` property.
-       */
-      list: {
-        type: String
-      },
-
-      /**
-       * A pattern to validate the `input` with. If you're using
-       * PaperInputBehavior to implement your own paper-input-like element, bind
-       * this to the `<input is="iron-input">`'s `pattern` property.
-       */
-      pattern: {
-        type: String
-      },
-
-      /**
-       * Set to true to mark the input as required. If you're using
-       * PaperInputBehavior to implement your own paper-input-like element, bind
-       * this to the `<input is="iron-input">`'s `required` property.
-       */
-      required: {
-        type: Boolean,
-        value: false
-      },
-
-      /**
-       * The error message to display when the input is invalid. If you're using
-       * PaperInputBehavior to implement your own paper-input-like element,
-       * bind this to the `<paper-input-error>`'s content, if using.
-       */
-      errorMessage: {
-        type: String
-      },
-
-      /**
-       * Set to true to show a character counter.
-       */
-      charCounter: {
-        type: Boolean,
-        value: false
-      },
-
-      /**
-       * Set to true to disable the floating label. If you're using
-       * PaperInputBehavior to implement your own paper-input-like element, bind
-       * this to the `<paper-input-container>`'s `noLabelFloat` property.
-       */
-      noLabelFloat: {
-        type: Boolean,
-        value: false
-      },
-
-      /**
-       * Set to true to always float the label. If you're using PaperInputBehavior
-       * to implement your own paper-input-like element, bind this to the
-       * `<paper-input-container>`'s `alwaysFloatLabel` property.
-       */
-      alwaysFloatLabel: {
-        type: Boolean,
-        value: false
-      },
-
-      /**
-       * Set to true to auto-validate the input value. If you're using
-       * PaperInputBehavior to implement your own paper-input-like element, bind
-       * this to the `<paper-input-container>`'s `autoValidate` property.
-       */
-      autoValidate: {
-        type: Boolean,
-        value: false
-      },
-
-      /**
-       * Name of the validator to use. If you're using PaperInputBehavior to
-       * implement your own paper-input-like element, bind this to
-       * the `<input is="iron-input">`'s `validator` property.
-       */
-      validator: {
-        type: String
-      },
-      // HTMLInputElement attributes for binding if needed
-
-      /**
-       * If you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the `<input is="iron-input">`'s `autocomplete`
-       * property.
-       */
-      autocomplete: {
-        type: String,
-        value: 'off'
-      },
-
-      /**
-       * If you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the `<input is="iron-input">`'s `autofocus`
-       * property.
-       */
-      autofocus: {
-        type: Boolean,
-        observer: '_autofocusChanged'
-      },
-
-      /**
-       * If you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the `<input is="iron-input">`'s `inputmode`
-       * property.
-       */
-      inputmode: {
-        type: String
-      },
-
-      /**
-       * The minimum length of the input value.
-       * If you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the `<input is="iron-input">`'s `minlength`
-       * property.
-       */
-      minlength: {
-        type: Number
-      },
-
-      /**
-       * The maximum length of the input value.
-       * If you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the `<input is="iron-input">`'s `maxlength`
-       * property.
-       */
-      maxlength: {
-        type: Number
-      },
-
-      /**
-       * The minimum (numeric or date-time) input value.
-       * If you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the `<input is="iron-input">`'s `min` property.
-       */
-      min: {
-        type: String
-      },
-
-      /**
-       * The maximum (numeric or date-time) input value.
-       * Can be a String (e.g. `"2000-01-01"`) or a Number (e.g. `2`).
-       * If you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the `<input is="iron-input">`'s `max` property.
-       */
-      max: {
-        type: String
-      },
-
-      /**
-       * Limits the numeric or date-time increments.
-       * If you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the `<input is="iron-input">`'s `step` property.
-       */
-      step: {
-        type: String
-      },
-
-      /**
-       * If you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the `<input is="iron-input">`'s `name` property.
-       */
-      name: {
-        type: String
-      },
-
-      /**
-       * A placeholder string in addition to the label. If this is set, the label
-       * will always float.
-       */
-      placeholder: {
-        type: String,
-        // need to set a default so _computeAlwaysFloatLabel is run
-        value: ''
-      },
-
-      /**
-       * If you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the `<input is="iron-input">`'s `readonly`
-       * property.
-       */
-      readonly: {
-        type: Boolean,
-        value: false
-      },
-
-      /**
-       * If you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the `<input is="iron-input">`'s `size` property.
-       */
-      size: {
-        type: Number
-      },
-      // Nonstandard attributes for binding if needed
-
-      /**
-       * If you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the `<input is="iron-input">`'s `autocapitalize`
-       * property.
-       *
-       * @type {string}
-       */
-      autocapitalize: {
-        type: String,
-        value: 'none'
-      },
-
-      /**
-       * If you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the `<input is="iron-input">`'s `autocorrect`
-       * property.
-       */
-      autocorrect: {
-        type: String,
-        value: 'off'
-      },
-
-      /**
-       * If you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the `<input is="iron-input">`'s `autosave`
-       * property, used with type=search.
-       */
-      autosave: {
-        type: String
-      },
-
-      /**
-       * If you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the `<input is="iron-input">`'s `results` property,
-       * used with type=search.
-       */
-      results: {
-        type: Number
-      },
-
-      /**
-       * If you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the `<input is="iron-input">`'s `accept` property,
-       * used with type=file.
-       */
-      accept: {
-        type: String
-      },
-
-      /**
-       * If you're using PaperInputBehavior to implement your own paper-input-like
-       * element, bind this to the`<input is="iron-input">`'s `multiple` property,
-       * used with type=file.
-       */
-      multiple: {
-        type: Boolean
-      },
-
-      /** @private */
-      _ariaDescribedBy: {
-        type: String,
-        value: ''
-      },
-
-      /** @private */
-      _ariaLabelledBy: {
-        type: String,
-        value: ''
-      },
-
-      /** @private */
-      _inputId: {
-        type: String,
-        value: ''
-      }
-    },
-    listeners: {
-      'addon-attached': '_onAddonAttached'
-    },
-
-    /**
-     * @type {!Object}
-     */
-    keyBindings: {
-      'shift+tab:keydown': '_onShiftTabDown'
-    },
-
-    /** @private */
-    hostAttributes: {
-      tabindex: 0
-    },
-
-    /**
-     * Returns a reference to the input element.
-     * @return {!HTMLElement}
-     */
-    get inputElement() {
-      // Chrome generates audit errors if an <input type="password"> has a
-      // duplicate ID, which is almost always true in Shady DOM. Generate
-      // a unique ID instead.
-      if (!this.$) {
-        this.$ = {};
-      }
-
-      if (!this.$.input) {
-        this._generateInputId();
-
-        this.$.input = this.$$('#' + this._inputId);
-      }
-
-      return this.$.input;
-    },
-
-    /**
-     * Returns a reference to the focusable element.
-     * @return {!HTMLElement}
-     */
-    get _focusableElement() {
-      return this.inputElement;
-    },
-
-    /** @override */
-    created: function () {
-      // These types have some default placeholder text; overlapping
-      // the label on top of it looks terrible. Auto-float the label in this case.
-      this._typesThatHaveText = ['date', 'datetime', 'datetime-local', 'month', 'time', 'week', 'file'];
-    },
-
-    /** @override */
-    attached: function () {
-      this._updateAriaLabelledBy(); // In the 2.0 version of the element, this is handled in `onIronInputReady`,
-      // i.e. after the native input has finished distributing. In the 1.0
-      // version, the input is in the shadow tree, so it's already available.
-
-
-      if (!PolymerElement && this.inputElement && this._typesThatHaveText.indexOf(this.inputElement.type) !== -1) {
-        this.alwaysFloatLabel = true;
-      }
-    },
-    _appendStringWithSpace: function (str, more) {
-      if (str) {
-        str = str + ' ' + more;
-      } else {
-        str = more;
-      }
-
-      return str;
-    },
-    _onAddonAttached: function (event) {
-      var target = dom(event).rootTarget;
-
-      if (target.id) {
-        this._ariaDescribedBy = this._appendStringWithSpace(this._ariaDescribedBy, target.id);
-      } else {
-        var id = 'paper-input-add-on-' + PaperInputHelper.NextAddonID++;
-        target.id = id;
-        this._ariaDescribedBy = this._appendStringWithSpace(this._ariaDescribedBy, id);
-      }
-    },
-
-    /**
-     * Validates the input element and sets an error style if needed.
-     *
-     * @return {boolean}
-     */
-    validate: function () {
-      return this.inputElement.validate();
-    },
-
-    /**
-     * Forward focus to inputElement. Overriden from IronControlState.
-     */
-    _focusBlurHandler: function (event) {
-      IronControlState._focusBlurHandler.call(this, event); // Forward the focus to the nested input.
-
-
-      if (this.focused && !this._shiftTabPressed && this._focusableElement) {
-        this._focusableElement.focus();
-      }
-    },
-
-    /**
-     * Handler that is called when a shift+tab keypress is detected by the menu.
-     *
-     * @param {CustomEvent} event A key combination event.
-     */
-    _onShiftTabDown: function (event) {
-      var oldTabIndex = this.getAttribute('tabindex');
-      this._shiftTabPressed = true;
-      this.setAttribute('tabindex', '-1');
-      this.async(function () {
-        this.setAttribute('tabindex', oldTabIndex);
-        this._shiftTabPressed = false;
-      }, 1);
-    },
-
-    /**
-     * If `autoValidate` is true, then validates the element.
-     */
-    _handleAutoValidate: function () {
-      if (this.autoValidate) this.validate();
-    },
-
-    /**
-     * Restores the cursor to its original position after updating the value.
-     * @param {string} newValue The value that should be saved.
-     */
-    updateValueAndPreserveCaret: function (newValue) {
-      // Not all elements might have selection, and even if they have the
-      // right properties, accessing them might throw an exception (like for
-      // <input type=number>)
-      try {
-        var start = this.inputElement.selectionStart;
-        this.value = newValue; // The cursor automatically jumps to the end after re-setting the value,
-        // so restore it to its original position.
-
-        this.inputElement.selectionStart = start;
-        this.inputElement.selectionEnd = start;
-      } catch (e) {
-        // Just set the value and give up on the caret.
-        this.value = newValue;
-      }
-    },
-    _computeAlwaysFloatLabel: function (alwaysFloatLabel, placeholder) {
-      return placeholder || alwaysFloatLabel;
-    },
-    _updateAriaLabelledBy: function () {
-      var label = dom(this.root).querySelector('label');
-
-      if (!label) {
-        this._ariaLabelledBy = '';
-        return;
-      }
-
-      var labelledBy;
-
-      if (label.id) {
-        labelledBy = label.id;
-      } else {
-        labelledBy = 'paper-input-label-' + PaperInputHelper.NextLabelID++;
-        label.id = labelledBy;
-      }
-
-      this._ariaLabelledBy = labelledBy;
-    },
-    _generateInputId: function () {
-      if (!this._inputId || this._inputId === '') {
-        this._inputId = 'input-' + PaperInputHelper.NextInputID++;
-      }
-    },
-    _onChange: function (event) {
-      // In the Shadow DOM, the `change` event is not leaked into the
-      // ancestor tree, so we must do this manually.
-      // See
-      // https://w3c.github.io/webcomponents/spec/shadow/#events-that-are-not-leaked-into-ancestor-trees.
-      if (this.shadowRoot) {
-        this.fire(event.type, {
-          sourceEvent: event
-        }, {
-          node: this,
-          bubbles: event.bubbles,
-          cancelable: event.cancelable
-        });
-      }
-    },
-    _autofocusChanged: function () {
-      // Firefox doesn't respect the autofocus attribute if it's applied after
-      // the page is loaded (Chrome/WebKit do respect it), preventing an
-      // autofocus attribute specified in markup from taking effect when the
-      // element is upgraded. As a workaround, if the autofocus property is set,
-      // and the focus hasn't already been moved elsewhere, we take focus.
-      if (this.autofocus && this._focusableElement) {
-        // In IE 11, the default document.activeElement can be the page's
-        // outermost html element, but there are also cases (under the
-        // polyfill?) in which the activeElement is not a real HTMLElement, but
-        // just a plain object. We identify the latter case as having no valid
-        // activeElement.
-        var activeElement = document.activeElement;
-        var isActiveElementValid = activeElement instanceof HTMLElement; // Has some other element has already taken the focus?
-
-        var isSomeElementActive = isActiveElementValid && activeElement !== document.body && activeElement !== document.documentElement;
-        /* IE 11 */
-
-        if (!isSomeElementActive) {
-          // No specific element has taken the focus yet, so we can take it.
-          this._focusableElement.focus();
-        }
-      }
-    }
-  };
-  /** @polymerBehavior */
-
-  const PaperInputBehavior = [IronControlState, IronA11yKeysBehavior, PaperInputBehaviorImpl];
-
-  /**
-  @license
-  Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-  This code may only be used under the BSD style license found at
-  http://polymer.github.io/LICENSE.txt The complete set of authors may be found at
-  http://polymer.github.io/AUTHORS.txt The complete set of contributors may be
-  found at http://polymer.github.io/CONTRIBUTORS.txt Code distributed by Google as
-  part of the polymer project is also subject to an additional IP rights grant
-  found at http://polymer.github.io/PATENTS.txt
-  */
-  /**
-  Material design: [Text
-  fields](https://www.google.com/design/spec/components/text-fields.html)
-
-  `<paper-input>` is a single-line text field with Material Design styling.
-
-      <paper-input label="Input label"></paper-input>
-
-  It may include an optional error message or character counter.
-
-      <paper-input error-message="Invalid input!" label="Input
-      label"></paper-input> <paper-input char-counter label="Input
-      label"></paper-input>
-
-  It can also include custom prefix or suffix elements, which are displayed
-  before or after the text input itself. In order for an element to be
-  considered as a prefix, it must have the `prefix` attribute (and similarly
-  for `suffix`).
-
-      <paper-input label="total">
-        <div prefix>$</div>
-        <paper-icon-button slot="suffix" icon="clear"></paper-icon-button>
-      </paper-input>
-
-  A `paper-input` can use the native `type=search` or `type=file` features.
-  However, since we can't control the native styling of the input (search icon,
-  file button, date placeholder, etc.), in these cases the label will be
-  automatically floated. The `placeholder` attribute can still be used for
-  additional informational text.
-
-      <paper-input label="search!" type="search"
-          placeholder="search for cats" autosave="test" results="5">
-      </paper-input>
-
-  See `Polymer.PaperInputBehavior` for more API docs.
-
-  ### Focus
-
-  To focus a paper-input, you can call the native `focus()` method as long as the
-  paper input has a tab index. Similarly, `blur()` will blur the element.
-
-  ### Styling
-
-  See `Polymer.PaperInputContainer` for a list of custom properties used to
-  style this element.
-
-  The following custom properties and mixins are available for styling:
-
-  Custom property | Description | Default
-  ----------------|-------------|----------
-  `--paper-input-container-ms-clear` | Mixin applied to the Internet Explorer reveal button (the eyeball) | {}
-
-  @element paper-input
-  @demo demo/index.html
-  */
-
-  Polymer({
-    is: 'paper-input',
-
-    /** @override */
-    _template: html$1`
-    <style>
-      :host {
-        display: block;
-      }
-
-      :host([focused]) {
-        outline: none;
-      }
-
-      :host([hidden]) {
-        display: none !important;
-      }
-
-      input {
-        /* Firefox sets a min-width on the input, which can cause layout issues */
-        min-width: 0;
-      }
-
-      /* In 1.x, the <input> is distributed to paper-input-container, which styles it.
-      In 2.x the <iron-input> is distributed to paper-input-container, which styles
-      it, but in order for this to work correctly, we need to reset some
-      of the native input's properties to inherit (from the iron-input) */
-      iron-input > input {
-        @apply --paper-input-container-shared-input-style;
-        font-family: inherit;
-        font-weight: inherit;
-        font-size: inherit;
-        letter-spacing: inherit;
-        word-spacing: inherit;
-        line-height: inherit;
-        text-shadow: inherit;
-        color: inherit;
-        cursor: inherit;
-      }
-
-      input:disabled {
-        @apply --paper-input-container-input-disabled;
-      }
-
-      input::-webkit-outer-spin-button,
-      input::-webkit-inner-spin-button {
-        @apply --paper-input-container-input-webkit-spinner;
-      }
-
-      input::-webkit-clear-button {
-        @apply --paper-input-container-input-webkit-clear;
-      }
-
-      input::-webkit-calendar-picker-indicator {
-        @apply --paper-input-container-input-webkit-calendar-picker-indicator;
-      }
-
-      input::-webkit-input-placeholder {
-        color: var(--paper-input-container-color, var(--secondary-text-color));
-      }
-
-      input:-moz-placeholder {
-        color: var(--paper-input-container-color, var(--secondary-text-color));
-      }
-
-      input::-moz-placeholder {
-        color: var(--paper-input-container-color, var(--secondary-text-color));
-      }
-
-      input::-ms-clear {
-        @apply --paper-input-container-ms-clear;
-      }
-
-      input::-ms-reveal {
-        @apply --paper-input-container-ms-reveal;
-      }
-
-      input:-ms-input-placeholder {
-        color: var(--paper-input-container-color, var(--secondary-text-color));
-      }
-
-      label {
-        pointer-events: none;
-      }
-    </style>
-
-    <paper-input-container id="container" no-label-float="[[noLabelFloat]]" always-float-label="[[_computeAlwaysFloatLabel(alwaysFloatLabel,placeholder)]]" auto-validate$="[[autoValidate]]" disabled$="[[disabled]]" invalid="[[invalid]]">
-
-      <slot name="prefix" slot="prefix"></slot>
-
-      <label hidden$="[[!label]]" aria-hidden="true" for$="[[_inputId]]" slot="label">[[label]]</label>
-
-      <!-- Need to bind maxlength so that the paper-input-char-counter works correctly -->
-      <iron-input bind-value="{{value}}" slot="input" class="input-element" id$="[[_inputId]]" maxlength$="[[maxlength]]" allowed-pattern="[[allowedPattern]]" invalid="{{invalid}}" validator="[[validator]]">
-        <input aria-labelledby$="[[_ariaLabelledBy]]" aria-describedby$="[[_ariaDescribedBy]]" disabled$="[[disabled]]" title$="[[title]]" type$="[[type]]" pattern$="[[pattern]]" required$="[[required]]" autocomplete$="[[autocomplete]]" autofocus$="[[autofocus]]" inputmode$="[[inputmode]]" minlength$="[[minlength]]" maxlength$="[[maxlength]]" min$="[[min]]" max$="[[max]]" step$="[[step]]" name$="[[name]]" placeholder$="[[placeholder]]" readonly$="[[readonly]]" list$="[[list]]" size$="[[size]]" autocapitalize$="[[autocapitalize]]" autocorrect$="[[autocorrect]]" on-change="_onChange" tabindex$="[[tabIndex]]" autosave$="[[autosave]]" results$="[[results]]" accept$="[[accept]]" multiple$="[[multiple]]" role$="[[inputRole]]" aria-haspopup$="[[inputAriaHaspopup]]">
-      </iron-input>
-
-      <slot name="suffix" slot="suffix"></slot>
-
-      <template is="dom-if" if="[[errorMessage]]">
-        <paper-input-error aria-live="assertive" slot="add-on">[[errorMessage]]</paper-input-error>
-      </template>
-
-      <template is="dom-if" if="[[charCounter]]">
-        <paper-input-char-counter slot="add-on"></paper-input-char-counter>
-      </template>
-
-    </paper-input-container>
-  `,
-    behaviors: [PaperInputBehavior, IronFormElementBehavior],
-    properties: {
-      value: {
-        // Required for the correct TypeScript type-generation
-        type: String
-      },
-      inputRole: {
-        type: String,
-        value: undefined
-      },
-      inputAriaHaspopup: {
-        type: String,
-        value: undefined
-      }
-    },
-
-    /**
-     * Returns a reference to the focusable element. Overridden from
-     * PaperInputBehavior to correctly focus the native input.
-     *
-     * @return {!HTMLElement}
-     */
-    get _focusableElement() {
-      return this.inputElement._inputElement;
-    },
-
-    // Note: This event is only available in the 1.0 version of this element.
-    // In 2.0, the functionality of `_onIronInputReady` is done in
-    // PaperInputBehavior::attached.
-    listeners: {
-      'iron-input-ready': '_onIronInputReady'
-    },
-    _onIronInputReady: function () {
-      // Even though this is only used in the next line, save this for
-      // backwards compatibility, since the native input had this ID until 2.0.5.
-      if (!this.$.nativeInput) {
-        this.$.nativeInput =
-        /** @type {!Element} */
-        this.$$('input');
-      }
-
-      if (this.inputElement && this._typesThatHaveText.indexOf(this.$.nativeInput.type) !== -1) {
-        this.alwaysFloatLabel = true;
-      } // Only validate when attached if the input already has a value.
-
-
-      if (!!this.inputElement.bindValue) {
-        this.$.container._handleValueAndAutoValidate(this.inputElement);
-      }
-    }
   });
 
   class Lumo extends HTMLElement {
@@ -39847,6 +41353,9 @@
         },
         selectedAddress: {
           type: Object
+        },
+        createRewardShareLoading: {
+          type: Boolean
         }
       };
     }
@@ -39855,6 +41364,7 @@
       return css`
             * {
                 --mdc-theme-primary: rgb(3, 169, 244);
+                --mdc-theme-secondary: var(--mdc-theme-primary);
                 --paper-input-container-focus-color: var(--mdc-theme-primary);
             }
             #reward-share-page {
@@ -39879,26 +41389,74 @@
       this.rewardShares = [];
       this.recipientPublicKey = '';
       this.percentageShare = 0;
+      this.createRewardShareLoading = false;
     }
+    /*
+    <h2>Create reward shares</h2>
+                <span><br>Creating a reward share for another account requires an account with level 5 or higher. If you are doing a self share (a reward share to your account) then put 0% for reward share percentage.</span>
+                  <paper-input label="Recipient public key" id="recipientPublicKey" type="text" value="${this.recipientPublicKey}"></paper-input>
+                <paper-input label="Reward share percentage" id="percentageShare" type="number" value="${this.percentageShare}"></paper-input>
+                  <mwc-button @click=${this.createRewardShare} style="width:100%;">Create rewardshare key</mwc-button>
+    */
+
 
     render() {
       return html`
             <div id="reward-share-page">
-                <h2>Create reward shares</h2>
-                <span><br>Creating a reward share requires an account with level 5 or higher</span>
+                <div style="min-height:48px;">
+                    <h3 style="margin:0; line-height:48px; padding-bottom: 8px; display:inline;">Rewardshares involving this account</h3>
+                    <mwc-button style="float:right;" @click=${() => this.shadowRoot.querySelector('#createRewardShareDialog').show()}><mwc-icon>add</mwc-icon>Create reward share</mwc-button>
+                </div>
 
-                <paper-input label="Recipient public key" id="recipientPublicKey" type="text" value="${this.recipientPublicKey}"></paper-input>
-                <paper-input label="Reward share percentage" id="percentageShare" type="number" value="${this.percentageShare}"></paper-input>
-
-                <mwc-button @click=${this.createRewardShareTransaction} style="width:100%;">Create rewardshare key</mwc-button>
-                
-                <h3>Reward shares involving this account</h3>
-                <vaadin-grid id="peersGrid" style="height:auto;" ?hidden="${this.isEmptyArray(this.peers)}" aria-label="Peers" .items="${this.peers}" height-by-rows>
+                <vaadin-grid id="accountRewardSharesGrid" style="height:auto;" ?hidden="${this.isEmptyArray(this.accountRewardShares)}" aria-label="Peers" .items="${this.accountRewardShares}" height-by-rows>
                     <vaadin-grid-column path="address"></vaadin-grid-column>
                     <vaadin-grid-column path="lastHeight"></vaadin-grid-column>
                 </vaadin-grid>
 
-                ${this.isEmptyArray(this.peers) ? html`
+                <mwc-dialog id="createRewardShareDialog" scrimClickAction="${this.createRewardShareLoading ? '' : 'close'}">
+                    <div>You must be level 5 or above to create a rewardshare!</div>
+                    <br>
+                    <mwc-textfield style="width:100%;" ?disabled="${this.createRewardShareLoading}" label="Reward share public key" id="createRewardShare"></mwc-textfield>
+                    <mwc-slider
+                        style="width:100%;"
+                        step="1"
+                        pin
+                        markers
+                        max="100"
+                        value="0">
+                    </mwc-slider>
+                    <div style="text-align:right; height:36px;" ?hidden=${this.addMintingAccountMessage === ''}>
+                        <span ?hidden="${this.createRewardShareLoading}">
+                            ${this.addMintingAccountMessage} &nbsp;
+                        </span>
+                        <span ?hidden="${!this.createRewardShareLoading}">
+                            <!-- loading message -->
+                            Doing something delicious &nbsp;
+                            <paper-spinner-lite
+                                style="margin-top:12px;"
+                                ?active="${this.createRewardShareLoading}"
+                                alt="Adding minting account"></paper-spinner-lite>
+                        </span>
+                    </div>
+                    <mwc-button
+                        ?disabled="${this.createRewardShareLoading}"
+                        slot="primaryAction"
+                        @click=${this.createRewardShare}
+                        >
+                        <!--dialogAction="add"-->
+                        Add
+                    </mwc-button>
+                    <mwc-button
+                        ?disabled="${this.createRewardShareLoading}"
+                        slot="secondaryAction"
+                        dialogAction="cancel"
+                        class="red">
+                        Close
+                    </mwc-button>
+                </mwc-dialog>
+
+
+                ${this.isEmptyArray(this.accountRewardShares) ? html`
                     Account is not involved in any reward shares
                 ` : ''}
             </div>
@@ -39920,7 +41478,7 @@
       parentEpml.imReady();
     }
 
-    async createRewardShareTransaction(e) {
+    async createRewardShare(e) {
       const recipientPublicKey = this.shadowRoot.querySelector("#recipientPublicKey").value;
       const percentageShare = this.shadowRoot.querySelector("#percentageShare").value; // var fee = this.fee
       // Check for valid...^
@@ -39930,8 +41488,9 @@
       try {
         const lastReference = await parentEpml.request('apiCall', {
           type: 'api',
-          url: `addresses/lastreference/${this.selectedAddress.address}`
+          url: `/addresses/lastreference/${this.selectedAddress.address}`
         });
+        console.log(lastReference);
         const txRequestResponse = await parentEpml.request('transaction', {
           type: 38,
           nonce: this.selectedAddress.nonce,
