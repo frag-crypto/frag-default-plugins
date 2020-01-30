@@ -41403,8 +41403,8 @@
     render() {
       return html`
             <div id="reward-share-page">
-                <div style="min-height:48px;">
-                    <h3 style="margin:0; line-height:48px; padding-bottom: 8px; display:inline;">Rewardshares involving this account</h3>
+                <div style="min-height:48px; display: flex; padding-bottom: 6px;">
+                    <h3 style="margin: 0; flex: 1; padding-top: 8px; display: inline;">Rewardshares involving this account</h3>
                     <mwc-button style="float:right;" @click=${() => this.shadowRoot.querySelector('#createRewardShareDialog').show()}><mwc-icon>add</mwc-icon>Create reward share</mwc-button>
                 </div>
 
@@ -41417,6 +41417,10 @@
                     <div>You must be level 5 or above to create a rewardshare!</div>
                     <br>
                     <mwc-textfield style="width:100%;" ?disabled="${this.createRewardShareLoading}" label="Reward share public key" id="createRewardShare"></mwc-textfield>
+                    <p style="margin-bottom:0;">
+                        Reward share percentage
+                        <!-- <mwc-textfield style="width:36px;" ?disabled="${this.createRewardShareLoading}" id="createRewardShare"></mwc-textfield> -->
+                    </p>
                     <mwc-slider
                         style="width:100%;"
                         step="1"

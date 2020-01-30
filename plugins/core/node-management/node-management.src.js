@@ -118,8 +118,8 @@ class NodeManagement extends LitElement {
 
                     <br><br>
                     <div id="minting">
-                        <div style="min-height:48px;">
-                            <h3 style="margin:0; line-height:48px; padding-bottom: 8px; display:inline;">Node's minting accounts</h3>
+                        <div style="min-height:48px; display: flex; padding-bottom: 6px;">
+                            <h3 style="margin: 0; flex: 1; padding-top: 8px; display: inline;">Node's minting accounts</h3>
                             <mwc-button style="float:right;" @click=${() => this.shadowRoot.querySelector('#addMintingAccountDialog').show()}><mwc-icon>add</mwc-icon>Add minting account</mwc-button>
                         </div>
 
@@ -168,10 +168,9 @@ class NodeManagement extends LitElement {
 
                     <br>
                     <div id="peers">
-                        <div style="min-height:48px;">
-                            <h3 style="margin:0; line-height:48px; padding-bottom: 8px; display:inline;">Peers connected to node</h3>
+                        <div style="min-height: 48px; display: flex; padding-bottom: 6px;">
+                            <h3 style="margin: 0; flex: 1; padding-top: 8px; display: inline;">Peers connected to node</h3>
                             <mwc-button
-                            style="float:right;"
                             @click=${() => this.shadowRoot.querySelector('#addPeerDialog').show()}><mwc-icon>add</mwc-icon>Add peer</mwc-button>
                         </div>
 
