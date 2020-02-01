@@ -41348,14 +41348,20 @@
         recipientPublicKey: {
           type: String
         },
-        percentageShare: {
-          type: String
-        },
         selectedAddress: {
           type: Object
         },
         createRewardShareLoading: {
           type: Boolean
+        },
+        rewardSharePercentage: {
+          type: Number
+        },
+        error: {
+          type: Boolean
+        },
+        message: {
+          type: String
         }
       };
     }
@@ -41388,7 +41394,7 @@
       this.selectedAddress = {};
       this.rewardShares = [];
       this.recipientPublicKey = '';
-      this.percentageShare = 0;
+      this.rewardSharePercentage = 0;
       this.createRewardShareLoading = false;
     }
     /*
@@ -41416,23 +41422,22 @@
                 <mwc-dialog id="createRewardShareDialog" scrimClickAction="${this.createRewardShareLoading ? '' : 'close'}">
                     <div>You must be level 5 or above to create a rewardshare!</div>
                     <br>
-                    <mwc-textfield style="width:100%;" ?disabled="${this.createRewardShareLoading}" label="Reward share public key" id="createRewardShare"></mwc-textfield>
+                    <mwc-textfield style="width:100%;" ?disabled="${this.createRewardShareLoading}" label="Reward share public key" id="recipientPublicKey"></mwc-textfield>
                     <p style="margin-bottom:0;">
-                        Reward share percentage
+                        Reward share percentage: ${this.rewardSharePercentage}
                         <!-- <mwc-textfield style="width:36px;" ?disabled="${this.createRewardShareLoading}" id="createRewardShare"></mwc-textfield> -->
                     </p>
                     <mwc-slider
+                        @change="${e => this.rewardSharePercentage = this.shadowRoot.getElementById('rewardSharePercentageSlider').value}"
+                        id="rewardSharePercentageSlider"
                         style="width:100%;"
                         step="1"
                         pin
                         markers
                         max="100"
-                        value="0">
+                        value="${this.rewardSharePercentage}">
                     </mwc-slider>
-                    <div style="text-align:right; height:36px;" ?hidden=${this.addMintingAccountMessage === ''}>
-                        <span ?hidden="${this.createRewardShareLoading}">
-                            ${this.addMintingAccountMessage} &nbsp;
-                        </span>
+                    <div style="text-align:right; height:36px;">
                         <span ?hidden="${!this.createRewardShareLoading}">
                             <!-- loading message -->
                             Doing something delicious &nbsp;
@@ -41441,7 +41446,11 @@
                                 ?active="${this.createRewardShareLoading}"
                                 alt="Adding minting account"></paper-spinner-lite>
                         </span>
+                        <span ?hidden=${this.message === ''} style="${this.error ? 'color:red;' : ''}">
+                            ${this.message}
+                        </span>
                     </div>
+                    
                     <mwc-button
                         ?disabled="${this.createRewardShareLoading}"
                         slot="primaryAction"
@@ -41483,8 +41492,11 @@
     }
 
     async createRewardShare(e) {
-      const recipientPublicKey = this.shadowRoot.querySelector("#recipientPublicKey").value;
-      const percentageShare = this.shadowRoot.querySelector("#percentageShare").value; // var fee = this.fee
+      this.error = false;
+      this.message = '';
+      const recipientPublicKey = this.shadowRoot.getElementById("recipientPublicKey").value;
+      const percentageShare = this.shadowRoot.getElementById("rewardSharePercentageSlider").value; // or just this.rewardSharePercentage?
+      // var fee = this.fee
       // Check for valid...^
 
       this.createRewardShareLoading = true;
@@ -41505,23 +41517,29 @@
             // fee
 
           }
-        });
-        console.log(txRequestResponse);
-        const responseData = JSON.parse(txRequestResponse); // JSON.parse(txRequestResponse)
+        }); // const responseData = JSON.parse(txRequestResponse) // JSON.parse(txRequestResponse)
+
+        const responseData = txRequestResponse; // Maybe it's already parsed?
 
         console.log(responseData);
 
         if (!responseData.reference) {
           if (responseData.success === false) {
-            throw new Error(responseData);
+            throw new Error(responseData.message);
           } // ${ERROR_CODES[responseData]}
+          // if (ERROR_CODES[responseData]) throw new Error(`Error!. Code ${responseData}: ${ERROR_CODES[responseData]}`)
 
 
-          if (ERROR_CODES[responseData]) throw new Error(`Error!. Code ${responseData}: ${ERROR_CODES[responseData]}`);
-          throw new Error(`Error!. ${responseData}`);
+          throw new Error(`Error!. ${responseData}`); // throw new Error(`Error!. ${ ERROR_CODES[responseData]}`)
         }
+
+        this.message = 'Success?';
+        this.error = false;
       } catch (e) {
         console.error(e);
+        console.log(e.message);
+        this.error = true;
+        this.message = e.message;
       }
 
       this.createRewardShareLoading = false;
