@@ -41519,25 +41519,21 @@
           }
         }); // const responseData = JSON.parse(txRequestResponse) // JSON.parse(txRequestResponse)
 
-        const responseData = txRequestResponse; // Maybe it's already parsed?
+        console.log(txRequestResponse);
 
-        console.log(responseData);
-
-        if (!responseData.reference) {
-          if (responseData.success === false) {
-            throw new Error(responseData.message);
+        if (txRequestResponse.data !== true) {
+          if (txRequestResponse.success === false) {
+            throw new Error(txRequestResponse.message);
           } // ${ERROR_CODES[responseData]}
           // if (ERROR_CODES[responseData]) throw new Error(`Error!. Code ${responseData}: ${ERROR_CODES[responseData]}`)
 
 
-          throw new Error(`Error! ${responseData}`); // throw new Error(`Error!. ${ ERROR_CODES[responseData]}`)
+          throw new Error(`Error code: ${txRequestResponse.data.error},  ${txRequestResponse.data.message}`); // throw new Error(`Error!. ${ ERROR_CODES[responseData]}`)
         }
 
-        this.message = 'Success?';
+        this.message = 'Success!';
         this.error = false;
       } catch (e) {
-        console.error(e);
-        console.log(e.message);
         this.error = true;
         this.message = e.message;
       }
