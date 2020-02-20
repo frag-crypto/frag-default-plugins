@@ -220,7 +220,8 @@
 
     const proxySources = new TwoWayMap();
 
-    const BLOCK_CHECK_INTERVAL = 3000;
+    const BLOCK_CHECK_INTERVAL = 3000; // You should be runn off config.user.nodeSettings.pingInterval...
+
     const BLOCK_CHECK_TIMEOUT = 3000;
     const BLOCK_STREAM_NAME = 'new_block';
     const onNewBlockFunctions = [];
@@ -344,7 +345,7 @@
         console.log("==============================");
         console.log(config);
 
-        if (!haveRegisteredNodeManagement && config.user.node.enableManagement) {
+        if (!haveRegisteredNodeManagement && config.user.knownNodes[config.user.node].enableManagement) {
           haveRegisteredNodeManagement = true;
           parentEpml.request('registerUrl', {
             url: 'node-management',

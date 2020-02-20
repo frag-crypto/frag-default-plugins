@@ -1,7 +1,7 @@
 import { parentEpml } from '../connect.js'
 import { EpmlStream } from 'epml'
 
-const BLOCK_CHECK_INTERVAL = 3000
+const BLOCK_CHECK_INTERVAL = 3000 // You should be runn off config.user.nodeSettings.pingInterval...
 const BLOCK_CHECK_TIMEOUT = 3000
 
 export const BLOCK_STREAM_NAME = 'new_block'

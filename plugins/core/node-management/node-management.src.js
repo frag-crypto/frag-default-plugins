@@ -261,7 +261,7 @@ class NodeManagement extends LitElement {
         const updateMintingAccounts = () => {
 
 
-            setTimeout(updateMintingAccounts, this.config.user.node.pingInterval) // Perhaps should be slower...?
+            setTimeout(updateMintingAccounts, this.config.user.nodeSettings.pingInterval) // Perhaps should be slower...?
         }
 
         const updatePeers = () => {
@@ -272,7 +272,7 @@ class NodeManagement extends LitElement {
                 setTimeout(() => {this.peers = res}, 1)
             })
 
-            setTimeout(updatePeers, this.config.user.node.pingInterval)
+            setTimeout(updatePeers, this.config.user.nodeSettings.pingInterval)
         }
 
         let configLoaded = false

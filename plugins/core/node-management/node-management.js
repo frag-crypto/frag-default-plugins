@@ -40417,7 +40417,7 @@
             this.peers = res;
           }, 1);
         });
-        setTimeout(updatePeers, this.config.user.node.pingInterval);
+        setTimeout(updatePeers, this.config.user.nodeSettings.pingInterval);
       };
 
       let configLoaded = false;

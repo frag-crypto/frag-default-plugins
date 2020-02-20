@@ -57,7 +57,7 @@ parentEpml.ready().then(() => {
         // Only register node management if node management is enabled and it hasn't already been registered
         console.log("==============================")
         console.log(config)
-        if (!haveRegisteredNodeManagement && config.user.node.enableManagement) {
+        if (!haveRegisteredNodeManagement && config.user.knownNodes[config.user.node].enableManagement) {
             haveRegisteredNodeManagement = true
             parentEpml.request('registerUrl', {
                 url: 'node-management',
