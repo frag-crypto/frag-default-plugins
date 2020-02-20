@@ -40314,7 +40314,8 @@
                         </mwc-dialog>
 
                         <vaadin-grid id="mintingAccountsGrid" style="height:auto;" ?hidden="${this.isEmptyArray(this.mintingAccounts)}" aria-label="Peers" .items="${this.mintingAccounts}" height-by-rows>
-                            <vaadin-grid-column path="address"></vaadin-grid-column>
+                            <vaadin-grid-column path="mintingAccount"></vaadin-grid-column>
+                            <vaadin-grid-column path="recipientAccount"></vaadin-grid-column>
                         </vaadin-grid>
 
                         ${this.isEmptyArray(this.mintingAccounts) ? html`
@@ -40371,7 +40372,7 @@
                         ` : ''}
                     </div>
                     <br>
-                    <mwc-button class="red-button"><mwc-icon style="width:24px;">highlight_off</mwc-icon>&nbsp; Shutdown node</mwc-button>
+                    <!-- <mwc-button class="red-button"><mwc-icon style="width:24px;">highlight_off</mwc-icon>&nbsp; Shutdown node</mwc-button> -->
                 </div>
             </div>
         `;
@@ -40396,17 +40397,30 @@
       this.addMintingAccountMessage = "Doing something delicious";
       const addMintingAccountKey = this.shadowRoot.querySelector('#addMintingAccountKey').value;
       parentEpml.request('apiCall', {
-        url: `​/admin​/mintingaccounts`,
+        url: `/admin/mintingaccounts`,
         method: 'POST',
         body: addMintingAccountKey
       }).then(res => {
         this.addMintingAccountMessage = res.message;
-        console.log(res);
         this.addMintingAccountLoading = false;
+        if (res === 'true') this.addMintingAccountMessage = 'Success!';
       }); // this.addMintingAccountLoading = false
     }
 
     firstUpdated() {
+      const updateMintingAccounts = () => {
+        console.log('=========================================');
+        parentEpml.request('apiCall', {
+          url: `/admin/mintingaccounts`
+        }).then(res => {
+          console.log(res);
+          this.mintingAccounts = [];
+          setTimeout(() => {
+            this.mintingAccounts = res;
+          }, 1);
+        });
+        setTimeout(updateMintingAccounts, this.config.user.nodeSettings.pingInterval); // Perhaps should be slower...?
+      };
 
       const updatePeers = () => {
         parentEpml.request('apiCall', {
@@ -40425,6 +40439,7 @@
         parentEpml.subscribe('config', c => {
           if (!configLoaded) {
             setTimeout(updatePeers, 1);
+            setTimeout(updateMintingAccounts, 1);
             configLoaded = true;
           }
 

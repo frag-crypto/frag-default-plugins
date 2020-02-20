@@ -5,7 +5,8 @@ import { UnconfirmedTransactionWatcher } from './UnconfirmedTransactionWatcher.j
 import { onNewBlock, check, BLOCK_STREAM_NAME } from './onNewBlock.js'
 
 const addrWatcher = new AddressWatcher()
-const txWatcher = new UnconfirmedTransactionWatcher()
+// who cares
+// const txWatcher = new UnconfirmedTransactionWatcher()
 
 let mostRecentBlock = { height:-1 }
 
@@ -23,8 +24,8 @@ parentEpml.subscribe('logged_in', async isLoggedIn => {
         // console.log(parsedAddress)
         addrWatcher.reset()
         parsedAddresses.forEach(addr => addrWatcher.addAddress(addr))
-        txWatcher.reset()
-        parsedAddresses.forEach(addr => txWatcher.addAddress(addr))
+        // txWatcher.reset()
+        // parsedAddresses.forEach(addr => txWatcher.addAddress(addr))
     }
 })
 
