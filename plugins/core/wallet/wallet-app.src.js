@@ -192,7 +192,7 @@ class WalletApp extends LitElement {
                 <div ?hidden="${this.loading}">
                     <div id="topbar" style="background: ; color: ; padding: 20px;">
                         <span class="mono weight-1300">
-                            <iron-icon icon="account-balance-wallet"></iron-icon> ${this.selectedAddress.address}
+                            <mwc-icon>account_balance_wallet</mwc-icon> ${this.selectedAddress.address}
                         </span>
                         <!-- <template is="dom-if" if="{{!address.name}}">
                                                         <paper-button on-tap="setName"><i>Set name</i></paper-button>
@@ -214,19 +214,17 @@ class WalletApp extends LitElement {
                 
                 
                         <div class="layout horizontal">
-                            <paper-card style="width:100%">
-                
-                                <!-- <div class="card-content"  hidden$="{{!isEmptyArray(address.transactions)}}"> -->
-                                <!--!this.isEmptyArray(this.selectedAddressTransactions)-->
-                                <div class="card-content" style="padding-left:12px;" ?hidden="${[...this.selectedAddressInfo.transactions].length > 0}">
-                                    Address has no transactions yet. 
-                                    <!-- Start by sending some KMX to <b>${this.selectedAddress.address}</b>
-                                    or
-                                    by claiming KEX from the airdrop. -->
-                                </div>
-                
-                                
-                        </div>
+                            <div style="padding-left:12px;" ?hidden="${[...this.selectedAddressInfo.transactions].length > 0}">
+                                Address has no transactions yet. 
+                                <!-- Start by sending some KMX to <b>${this.selectedAddress.address}</b>
+                                or
+                                by claiming KEX from the airdrop. -->
+                            </div>
+
+                            <vaadin-grid id="peersGrid" style="height:auto;" ?hidden="${this.isEmptyArray(this.peers)}" aria-label="Peers" .items="${this.peers}" height-by-rows>
+                                <vaadin-grid-column path="address"></vaadin-grid-column>
+                                <vaadin-grid-column path="lastHeight"></vaadin-grid-column>
+                            </vaadin-grid>
                     </div>
                 </div>
             </div>
