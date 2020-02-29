@@ -1,6 +1,6 @@
 {
   "name": "@frag-crypto/frag-default-plugins",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "main": "default-plugins.js",
   "repository": "https://github.com/frag-crypto/frag-default-plugins.git",
   "author": "irontiga <irontiga@gmail.com>",
