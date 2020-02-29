@@ -34,7 +34,7 @@ const doCheck = async () => {
         url: '/blocks/last'
     })
     clearTimeout(timeout)
-    console.log(block)
+    // console.log(block)
     // const parsedBlock = JSON.parse(block)
     // console.log(parsedBlock, mostRecentBlock)
     if (block.height > mostRecentBlock.height) {

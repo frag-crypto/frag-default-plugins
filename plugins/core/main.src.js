@@ -18,7 +18,7 @@ const pingAirdropServer = () => {
     if (!address || !config.coin) return
     const node = config.coin.node.airdrop
     const url = `${node.protocol}://${node.domain}:${node.port}${node.dhcpUrl}${address}`
-    fetch(url).then(res => console.log(res))
+    fetch(url).then(res => /* console.log(res)*/ )
 }
 
 parentEpml.ready().then(() => {
@@ -55,8 +55,8 @@ parentEpml.ready().then(() => {
         config = JSON.parse(c)
         pingAirdropServer()
         // Only register node management if node management is enabled and it hasn't already been registered
-        console.log("==============================")
-        console.log(config)
+        // console.log("==============================")
+        // console.log(config)
         if (!haveRegisteredNodeManagement && config.user.knownNodes[config.user.node].enableManagement) {
             haveRegisteredNodeManagement = true
             parentEpml.request('registerUrl', {
@@ -71,7 +71,7 @@ parentEpml.ready().then(() => {
         }
     })
     parentEpml.subscribe('selected_address', addr => {
-        console.log('RECEIVED SELECTED ADDRESS STREAM')
+        // console.log('RECEIVED SELECTED ADDRESS STREAM')
         address = addr.address
         pingAirdropServer()
     })

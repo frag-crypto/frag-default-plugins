@@ -11,7 +11,7 @@ const addrWatcher = new AddressWatcher()
 let mostRecentBlock = { height:-1 }
 
 const blockStream = new EpmlStream(BLOCK_STREAM_NAME, () => {
-    console.log('WE GOT A SUBSCRIPTION')
+    // console.log('WE GOT A SUBSCRIPTION')
     return mostRecentBlock
 })
 
@@ -20,7 +20,7 @@ parentEpml.subscribe('logged_in', async isLoggedIn => {
         // console.log('"logged_in stream" in core/main.js', isLoggedIn)
         const addresses = await parentEpml.request('addresses')
         const parsedAddresses = addresses // JSON.parse(addresses)
-        console.log(parsedAddresses)
+        // console.log(parsedAddresses)
         // console.log(parsedAddress)
         addrWatcher.reset()
         parsedAddresses.forEach(addr => addrWatcher.addAddress(addr))

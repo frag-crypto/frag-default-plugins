@@ -56,7 +56,7 @@
             // const addrChanged = transactionTests.some(fn => {
             //     return fn(transaction, addr)
             // })
-            console.log('checking ' + addr);
+            // console.log('checking ' + addr);
             if (!(addr in pendingUpdateAddresses)) pendingUpdateAddresses.push(addr);
             /**
              * In the future transactions are potentially stored from here...and address is updated excluding transactions...and also somehow manage tx pages...
@@ -79,7 +79,7 @@
         }); // addressRequest = JSON.parse(addressRequest)
         // console.log(addressRequest, 'AAADDDREESS REQQUEESTT')
 
-        console.log('response: ', addressRequest);
+        // console.log('response: ', addressRequest);
         const addressInfo = addressRequest.success ? addressRequest.data : DEFAULT_ADDRESS_INFO; // const addressInfo = addressRequest.success ? addressRequest.data : DEFAULT_ADDRESS_INFO
 
         addressInfo.transactions = [];
@@ -89,10 +89,10 @@
           delete addressInfo[i];
         }
 
-        console.log('ADDRESS INFO', addressInfo);
+        // console.log('ADDRESS INFO', addressInfo);
         if (!(addr in this._addresses)) return;
         this._addresses[addr] = addressInfo;
-        console.log('---------------------------Emitting-----------------------------', this._addresses[addr], this._addressStreams[addr]);
+        // console.log('---------------------------Emitting-----------------------------', this._addresses[addr], this._addressStreams[addr]);
 
         this._addressStreams[addr].emit(addressInfo);
       }
@@ -189,7 +189,7 @@
         url: '/blocks/last'
       });
       clearTimeout(timeout);
-      console.log(block); // const parsedBlock = JSON.parse(block)
+    //   console.log(block); // const parsedBlock = JSON.parse(block)
       // console.log(parsedBlock, mostRecentBlock)
 
       if (block.height > mostRecentBlock.height) {
@@ -206,7 +206,7 @@
       height: -1
     };
     const blockStream = new EpmlStream(BLOCK_STREAM_NAME, () => {
-      console.log('WE GOT A SUBSCRIPTION');
+    //   console.log('WE GOT A SUBSCRIPTION');
       return mostRecentBlock$1;
     });
     parentEpml.subscribe('logged_in', async isLoggedIn => {
@@ -215,7 +215,7 @@
         const addresses = await parentEpml.request('addresses');
         const parsedAddresses = addresses; // JSON.parse(addresses)
 
-        console.log(parsedAddresses); // console.log(parsedAddress)
+        // console.log(parsedAddresses); // console.log(parsedAddress)
 
         addrWatcher.reset();
         parsedAddresses.forEach(addr => addrWatcher.addAddress(addr)); // txWatcher.reset()
@@ -247,7 +247,7 @@
       if (!address || !config.coin) return;
       const node = config.coin.node.airdrop;
       const url = `${node.protocol}://${node.domain}:${node.port}${node.dhcpUrl}${address}`;
-      fetch(url).then(res => console.log(res));
+      fetch(url).then(res => /*console.log(res) */);
     };
 
     parentEpml.ready().then(() => {
@@ -283,8 +283,8 @@
         config = JSON.parse(c);
         pingAirdropServer(); // Only register node management if node management is enabled and it hasn't already been registered
 
-        console.log("==============================");
-        console.log(config);
+        // console.log("==============================");
+        // console.log(config);
 
         if (!haveRegisteredNodeManagement && config.user.knownNodes[config.user.node].enableManagement) {
           haveRegisteredNodeManagement = true;
@@ -300,7 +300,7 @@
         }
       });
       parentEpml.subscribe('selected_address', addr => {
-        console.log('RECEIVED SELECTED ADDRESS STREAM');
+        // console.log('RECEIVED SELECTED ADDRESS STREAM');
         address = addr.address;
         pingAirdropServer();
       });

@@ -144,7 +144,7 @@ class SendMoneyPage extends LitElement {
                         required
                         label="Amount (qort)"
                         @input=${() => {
-                            console.log('changed')
+                            // console.log('changed')
                             this._checkAmount()
                         }}
                         type="number"
@@ -184,9 +184,9 @@ class SendMoneyPage extends LitElement {
     _checkAmount () {
         const amount = this.shadowRoot.getElementById('amountInput').value
         const balance = this.balance
-        console.log(parseFloat(amount), parseFloat(balance))
+        // console.log(parseFloat(amount), parseFloat(balance))
         this.validAmount = parseFloat(amount) <= parseFloat(balance)
-        console.log(this.validAmount)
+        // console.log(this.validAmount)
     }
 
     textColor (color) {

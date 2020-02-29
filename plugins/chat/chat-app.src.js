@@ -148,7 +148,7 @@ class ChatApp extends LitElement {
             }))
 
             this.socket.on('message', message => {
-                console.log(message)
+                // console.log(message)
                 this.messages = [...this.messages, message]
                 setTimeout(() => this.scrollBottom(), 1)
             })

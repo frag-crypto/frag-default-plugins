@@ -49,7 +49,7 @@ export class UnconfirmedTransactionWatcher {
                 url: `/transactions/unconfirmed`
             }).then(unconfirmedTransactions => {
                 // unconfirmedTransactions = JSON.parse(unconfirmedTransactions)
-                console.log(unconfirmedTransactions)
+                // console.log(unconfirmedTransactions)
                 unconfirmedTransactions.filter(tx => {
                     tx.creatorAddress === addr || tx.recipient === addr
                 })

@@ -55,7 +55,7 @@ export class AddressWatcher {
                 // const addrChanged = transactionTests.some(fn => {
                 //     return fn(transaction, addr)
                 // })
-                console.log('checking ' + addr)
+                // console.log('checking ' + addr)
                 const addrChanged = true // Just update it every block...for now
                 if (!addrChanged) return
 
@@ -81,7 +81,7 @@ export class AddressWatcher {
         })
         // addressRequest = JSON.parse(addressRequest)
         // console.log(addressRequest, 'AAADDDREESS REQQUEESTT')
-        console.log('response: ', addressRequest)
+        // console.log('response: ', addressRequest)
 
         const addressInfo = addressRequest.success ? addressRequest.data : DEFAULT_ADDRESS_INFO
         // const addressInfo = addressRequest.success ? addressRequest.data : DEFAULT_ADDRESS_INFO
@@ -91,11 +91,11 @@ export class AddressWatcher {
             addressInfo.transactions.push(addressInfo[i])
             delete addressInfo[i]
         }
-        console.log('ADDRESS INFO', addressInfo)
+        // console.log('ADDRESS INFO', addressInfo)
         if (!(addr in this._addresses)) return
 
         this._addresses[addr] = addressInfo
-        console.log('---------------------------Emitting-----------------------------', this._addresses[addr], this._addressStreams[addr])
+        // console.log('---------------------------Emitting-----------------------------', this._addresses[addr], this._addressStreams[addr])
         this._addressStreams[addr].emit(addressInfo)
     }
 }

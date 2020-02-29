@@ -41478,11 +41478,11 @@
 
     firstUpdated() {
       const updateRewardshares = () => {
-        console.log('=========================================');
+        // console.log('=========================================')
         parentEpml.request('apiCall', {
           url: `/addresses/rewardshares?involving=${this.selectedAddress.address}`
         }).then(res => {
-          console.log(res);
+          // console.log(res)
           this.rewardShares = [];
           setTimeout(() => {
             this.rewardShares = res;
@@ -41528,8 +41528,8 @@
         const lastReference = await parentEpml.request('apiCall', {
           type: 'api',
           url: `/addresses/lastreference/${this.selectedAddress.address}`
-        });
-        console.log(lastReference);
+        }); // console.log(lastReference)
+
         const txRequestResponse = await parentEpml.request('transaction', {
           type: 38,
           nonce: this.selectedAddress.nonce,
@@ -41541,8 +41541,7 @@
 
           }
         }); // const responseData = JSON.parse(txRequestResponse) // JSON.parse(txRequestResponse)
-
-        console.log(txRequestResponse);
+        // console.log(txRequestResponse)
 
         if (txRequestResponse.data !== true) {
           if (txRequestResponse.success === false) {

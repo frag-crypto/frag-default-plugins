@@ -35500,8 +35500,8 @@
                                 <vaadin-grid-column path="fee"></vaadin-grid-column>
                                 <vaadin-grid-column path="amount"></vaadin-grid-column>
                                 <vaadin-grid-column header="Time" .renderer=${(root, column, data) => {
-      console.log(data.item.timestamp);
-      console.log(root);
+      // console.log(data.item.timestamp)
+      // console.log(root)
       const time = new Date(data.item.timestamp);
       render(html`
                                         <time-ago datetime=${time.toISOString()}>
@@ -35571,9 +35571,9 @@
       parentEpml.request('apiCall', {
         url: `/transactions/search?address=${this.selectedAddress.address}&confirmationStatus=BOTH&limit=20`
       }).then(res => {
-        console.log(res);
-        this.transactions = res;
-        console.log(this.config.user.nodeSettings.pingInterval);
+        // console.log(res)
+        this.transactions = res; // console.log(this.config.user.nodeSettings.pingInterval)
+
         this.updateAccountTransactionTimeout = setTimeout(() => this.updateAccountTransactions(), this.config.user.nodeSettings.pingInterval ? this.config.user.nodeSettings.pingInterval : 4000);
       });
     }
@@ -35583,9 +35583,9 @@
       parentEpml.request('apiCall', {
         url: `/addresses/${this.selectedAddress.address}`
       }).then(res => {
-        console.log(res);
-        this.addressInfo = res;
-        console.log(this.config.user.nodeSettings.pingInterval);
+        // console.log(res)
+        this.addressInfo = res; // console.log(this.config.user.nodeSettings.pingInterval)
+
         this.updateAccountInfoTimeout = setTimeout(() => this.updateAccountInfo(), this.config.user.nodeSettings.pingInterval ? this.config.user.nodeSettings.pingInterval : 4000);
       });
     }
@@ -35595,9 +35595,9 @@
       parentEpml.request('apiCall', {
         url: `/addresses/balance/${this.selectedAddress.address}`
       }).then(res => {
-        console.log(res);
-        this.balance = res;
-        console.log(this.config.user.nodeSettings.pingInterval);
+        // console.log(res)
+        this.balance = res; // console.log(this.config.user.nodeSettings.pingInterval)
+
         this.updateAccountBalanceTimeout = setTimeout(() => this.updateAccountBalance(), this.config.user.nodeSettings.pingInterval ? this.config.user.nodeSettings.pingInterval : 4000);
       });
     }
