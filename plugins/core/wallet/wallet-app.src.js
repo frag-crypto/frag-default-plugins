@@ -4,6 +4,7 @@ import '@webcomponents/webcomponentsjs/webcomponents-loader.js'
 import '@webcomponents/webcomponentsjs/custom-elements-es5-adapter.js'
 
 import { LitElement, html, css } from 'lit-element'
+import { render } from 'lit-html'
 // import { Epml } from '../../../src/epml.js'
 import { Epml } from '../../../epml.js'
 
@@ -12,6 +13,8 @@ import '@polymer/paper-spinner/paper-spinner-lite.js'
 // import * as thing from 'time-elements'
 import '@vaadin/vaadin-grid/vaadin-grid.js'
 import '@vaadin/vaadin-grid/theme/material/all-imports.js'
+
+import '@github/time-elements'
 
 const TX_TYPES = {
     1: 'Genesis',
@@ -67,7 +70,10 @@ class WalletApp extends LitElement {
             selectedAddressTransactions: { type: Array },
             addressesUnconfirmedTransactions: { type: Object },
             addressInfoStreams: { type: Object },
-            unconfirmedTransactionStreams: { type: Object }
+            unconfirmedTransactionStreams: { type: Object },
+            transactions: { type: Object },
+            addressInfo: { type: Object },
+            balance: { type: Number }
         }
     }
 
@@ -192,7 +198,7 @@ class WalletApp extends LitElement {
                 <div ?hidden="${this.loading}">
                     <div id="topbar" style="background: ; color: ; padding: 20px;">
                         <span class="mono weight-1300">
-                            <mwc-icon>account_balance_wallet</mwc-icon> ${this.selectedAddress.address}
+                            <!-- <mwc-icon>account_balance_wallet</mwc-icon>  -->${this.selectedAddress.address}
                         </span>
                         <!-- <template is="dom-if" if="{{!address.name}}">
                                                         <paper-button on-tap="setName"><i>Set name</i></paper-button>
@@ -200,8 +206,8 @@ class WalletApp extends LitElement {
                         <br>
                         <div class="layout horizontal wrap">
                             <div>
-                                <span class="mono weight-100" style="font-size: 70px;">${this.floor(this.selectedAddressInfo.nativeBalance.total[0])}<span
-                                        style="font-size:24px; vertical-align: top; line-height:60px;">.${this.decimals(this.selectedAddressInfo.nativeBalance.total[0])}
+                                <span class="mono weight-100" style="font-size: 70px;">${this.floor(this.balance)}<span
+                                        style="font-size:24px; vertical-align: top; line-height:60px;">.${this.decimals(this.balance)}
                                         qort</span></span>
                                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                             </div>
@@ -214,16 +220,29 @@ class WalletApp extends LitElement {
                 
                 
                         <div class="layout horizontal">
-                            <div style="padding-left:12px;" ?hidden="${[...this.selectedAddressInfo.transactions].length > 0}">
+                            <div style="padding-left:12px;" ?hidden="${!this.isEmptyArray(this.transactions)}">
                                 Address has no transactions yet. 
                                 <!-- Start by sending some KMX to <b>${this.selectedAddress.address}</b>
                                 or
                                 by claiming KEX from the airdrop. -->
                             </div>
 
-                            <vaadin-grid id="peersGrid" style="height:auto;" ?hidden="${this.isEmptyArray(this.peers)}" aria-label="Peers" .items="${this.peers}" height-by-rows>
-                                <vaadin-grid-column path="address"></vaadin-grid-column>
-                                <vaadin-grid-column path="lastHeight"></vaadin-grid-column>
+                            <vaadin-grid id="gransactionsGrid" style="height:auto;" ?hidden="${this.isEmptyArray(this.transactions)}" aria-label="Peers" .items="${this.transactions}" height-by-rows>
+                                <vaadin-grid-column path="type"></vaadin-grid-column>
+                                <vaadin-grid-column path="recipient"></vaadin-grid-column>
+                                <vaadin-grid-column path="fee"></vaadin-grid-column>
+                                <vaadin-grid-column path="amount"></vaadin-grid-column>
+                                <vaadin-grid-column header="Time" .renderer=${(root, column, data) => {
+                                    console.log(data.item.timestamp)
+                                    console.log(root)
+                                    const time = new Date(data.item.timestamp)
+                                    render(html`
+                                        <time-ago datetime=${time.toISOString()}>
+                                            
+                                        </time-ago>
+                                    `, root)
+                                }}>
+                                </vaadin-grid-column>
                             </vaadin-grid>
                     </div>
                 </div>
@@ -249,6 +268,7 @@ class WalletApp extends LitElement {
                 this.selectedAddress = selectedAddress
                 const addr = selectedAddress.address
                 this.updateAccountTransactions()
+                this.updateAccountBalance()
 
                 // if (!this.addressInfoStreams[addr]) {
                 //     console.log('AND DIDN\'T FIND AN EXISTING ADDRESS STREAM')
@@ -290,6 +310,30 @@ class WalletApp extends LitElement {
             this.transactions = res
             console.log(this.config.user.nodeSettings.pingInterval)
             this.updateAccountTransactionTimeout = setTimeout(() => this.updateAccountTransactions(), this.config.user.nodeSettings.pingInterval ? this.config.user.nodeSettings.pingInterval : 4000 )
+        })
+    }
+
+    updateAccountInfo() {
+        clearTimeout(this.updateAccountInfoTimeout)
+        parentEpml.request('apiCall', {
+            url: `/addresses/${this.selectedAddress.address}`
+        }).then(res => {
+            console.log(res)
+            this.addressInfo = res
+            console.log(this.config.user.nodeSettings.pingInterval)
+            this.updateAccountInfoTimeout = setTimeout(() => this.updateAccountInfo(), this.config.user.nodeSettings.pingInterval ? this.config.user.nodeSettings.pingInterval : 4000)
+        })
+    }
+
+    updateAccountBalance() {
+        clearTimeout(this.updateAccountBalanceTimeout)
+        parentEpml.request('apiCall', {
+            url: `/addresses/balance/${this.selectedAddress.address}`
+        }).then(res => {
+            console.log(res)
+            this.balance = res
+            console.log(this.config.user.nodeSettings.pingInterval)
+            this.updateAccountBalanceTimeout = setTimeout(() => this.updateAccountBalance(), this.config.user.nodeSettings.pingInterval ? this.config.user.nodeSettings.pingInterval : 4000)
         })
     }
 

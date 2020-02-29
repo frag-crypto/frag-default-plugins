@@ -125,6 +125,11 @@
     lodash "^4.17.13"
     to-fast-properties "^2.0.0"
 
+"@github/time-elements@^3.1.0":
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/@github/time-elements/-/time-elements-3.1.0.tgz#879723eec7d486e3ebaf738a29f7746ec2c2caf4"
+  integrity sha512-vdqN75AZbb5du7Lkr8Ra4mtsIeDMjFfbjFUwgOln/SKfRQYPwUuhVAsxxKTaCtuJ0CeWqvK75WxsBOcAmu6loA==
+
 "@material/animation@5.0.0-canary.1c494e567.0":
   version "5.0.0-canary.1c494e567.0"
   resolved "https://registry.yarnpkg.com/@material/animation/-/animation-5.0.0-canary.1c494e567.0.tgz#c3acbedf67e78b4b35306df82652e601f006b758"

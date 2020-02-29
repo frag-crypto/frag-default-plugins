@@ -26962,6 +26962,9 @@
         },
         validAmount: {
           type: Boolean
+        },
+        balance: {
+          type: Number
         }
       };
     }
@@ -27054,7 +27057,7 @@
 
                             <div class="selectedBalance">
                                 <!--  style$="color: {{selectedAddress.color}}" -->
-                                <span class="balance">${this.selectedAddressInfo.nativeBalance.total[0]} qort</span> available for
+                                <span class="balance">${this.balance} qort</span> available for
                                 transfer from
                                 <span>${this.selectedAddress.address}</span>
                             </div>
@@ -27106,7 +27109,7 @@
 
     _checkAmount() {
       const amount = this.shadowRoot.getElementById('amountInput').value;
-      const balance = this.selectedAddressInfo.nativeBalance.total[0];
+      const balance = this.balance;
       console.log(parseFloat(amount), parseFloat(balance));
       this.validAmount = parseFloat(amount) <= parseFloat(balance);
       console.log(this.validAmount);
@@ -27128,7 +27131,7 @@
       try {
         let lastRef = await parentEpml.request('apiCall', {
           type: 'api',
-          url: `addresses/lastreference/${this.selectedAddress.address}/unconfirmed`
+          url: `/addresses/lastreference/${this.selectedAddress.address}`
         }); // lastRef = lastRef.data
 
         console.log(lastRef); // TICK
@@ -27158,9 +27161,8 @@
           params: {
             recipient,
             amount: amount * Math.pow(10, 8),
-            lastReference: lastRef // ,
-            // fee
-
+            lastReference: lastRef,
+            fee: 0.001
           }
         });
         console.log(txRequestResponse);
@@ -27188,10 +27190,19 @@
       }
 
       this.sendMoneyLoading = false;
-    } // _getSelectedAddressInfo (addressesInfo, selectedAddress) {
-    //     return this.addressesInfo[selectedAddress.address]
-    // }
+    }
 
+    updateAccountBalance() {
+      clearTimeout(this.updateAccountBalanceTimeout);
+      parentEpml.request('apiCall', {
+        url: `/addresses/balance/${this.selectedAddress.address}`
+      }).then(res => {
+        console.log(res);
+        this.balance = res;
+        console.log(this.config.user.nodeSettings.pingInterval);
+        this.updateAccountBalanceTimeout = setTimeout(() => this.updateAccountBalance(), this.config.user.nodeSettings.pingInterval ? this.config.user.nodeSettings.pingInterval : 4000);
+      });
+    }
 
     constructor() {
       super();
@@ -27222,82 +27233,8 @@
           if (!selectedAddress || Object.entries(selectedAddress).length === 0) return; // Not ready yet ofc
 
           this.selectedAddress = selectedAddress;
-          const addr = selectedAddress.address; // console.log(selectedAddress)
-          // console.log(addr)
-          // Let's just assume ok
-          // const ready = coreEpml.ready()
-          // await ready
-          // console.log('Core ready FFUCCC')
-
-          if (!this.addressInfoStreams[addr]) {
-            console.log('AND DIDN\'T FIND AN EXISTING ADDRESS STREAM');
-            this.addressInfoStreams[addr] = coreEpml.subscribe(`address/${addr}`, addrInfo => {
-              console.log('HELLLLLLOOOOOOOOO');
-              console.log('HELLLLLLOOOOOOOOO');
-              console.log('HELLLLLLOOOOOOOOO');
-              console.log('HELLLLLLOOOOOOOOO');
-              console.log('HELLLLLLOOOOOOOOO');
-              console.log('HELLLLLLOOOOOOOOO');
-              console.log('HELLLLLLOOOOOOOOO');
-              addrInfo = JSON.parse(addrInfo);
-              console.log('FINALLY RECEIVE ADDR INFO..', addrInfo);
-              this.loading = false;
-              addrInfo.nativeBalance = addrInfo.nativeBalance || {
-                total: {}
-              }; // console.log('NATIVE',addrInfo)
-              // addrInfo.nativeBalance.total['0'] = addrInfo.nativeBalance.total['0'] || 0
-              // addrInfo.nativeBalance.total['1'] = addrInfo.nativeBalance.total['1'] || 0
-
-              console.log(addrInfo.nativeBalance);
-              this.addressesInfo = { ...this.addressesInfo,
-                [addr]: addrInfo
-              };
-              this.selectedAddressInfo = this.addressesInfo[this.selectedAddress.address];
-              console.log('ASDHJKFGASDKHGFGHASDKJFGHJKDSADFGHJKSSDGHJKDGHJKF');
-              console.log(this.addressesInfo);
-              console.log(this.selectedAddressInfo); // const addressesInfoStore = this.addressesInfo
-              // this.addressesInfo = {}
-              // this.addressesInfo = addressesInfoStore
-            });
-          }
-
-          if (!this.unconfirmedTransactionStreams[addr]) {
-            console.log('AND DIDN\'T FIND AN EXISTING UNCONFIRMED TX STREAM');
-            this.addressesUnconfirmedTransactions[addr] = [];
-            this.unconfirmedTransactionStreams[addr] = coreEpml.subscribe(`unconfirmedOfAddress/${addr}`, unconfirmedTransactions => {
-              unconfirmedTransactions = JSON.parse(unconfirmedTransactions);
-              unconfirmedTransactions = unconfirmedTransactions.map(tx => {
-                return {
-                  transaction: tx,
-                  unconfirmed: true
-                };
-              });
-            });
-          } // parentEpml.subscribe('selected_address', async selectedAddress => {
-          //     selectedAddress = JSON.parse(selectedAddress)
-          //     this.selectedAddress = {}
-          //     if (!selectedAddress) return
-          //     const addr = selectedAddress.address
-          //     // await coreEpml.ready()
-          //     // console.log('STULE YEA')
-          //     if (!this.addressInfoStreams[addr]) {
-          //         this.addressInfoStreams[addr] = coreEpml.subscribe(`address/${addr}`, addrInfo => {
-          //             console.log('Send money page received', addrInfo)
-          //             // Ahh....actually if no balance....no last reference and so you can't send money
-          //             addrInfo.nativeBalance = addrInfo.nativeBalance || { total: {} }
-          //             addrInfo.nativeBalance.total['0'] = addrInfo.nativeBalance.total['0'] || 0
-          //             this.set(`addressesInfo.${addr}`, addrInfo)
-          //             const addressesInfoStore = this.addressesInfo
-          //             this.addressesInfo = {}
-          //             this.addressesInfo = addressesInfoStore
-          //         })
-          //     }
-          //     if (!this.unconfirmedTransactionStreams[addr]) {
-          //         this.unconfirmedTransactionStreams[addr] = coreEpml.subscribe(`unconfirmedOfAddress/${addr}`, unconfirmedTransactions => {
-          //             this.addressesUnconfirmedTransactions[addr] = unconfirmedTransactions
-          //         })
-          //     }
-
+          const addr = selectedAddress.address;
+          this.updateAccountBalance();
         });
       });
     }

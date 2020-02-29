@@ -148,6 +148,20 @@ class RewardShare extends LitElement {
     }
 
     firstUpdated() {
+        const updateRewardshares = () => {
+            console.log('=========================================')
+            parentEpml.request('apiCall', {
+                url: `/addresses/rewardshares?involving=${this.selectedAddress.address}`
+            }).then(res => {
+                console.log(res)
+                this.rewardShares = []
+                setTimeout(() => { this.rewardShares = res }, 1)
+            })
+            setTimeout(updateRewardshares, this.config.user.nodeSettings.pingInterval) // Perhaps should be slower...?
+        }
+
+        let configLoaded = false
+
         parentEpml.ready().then(() => {
             // Guess this is our version of state management...should make a plugin for it...proxied redux or whatever lol
             parentEpml.subscribe('selected_address', async selectedAddress => {
@@ -157,8 +171,16 @@ class RewardShare extends LitElement {
                 if (!selectedAddress || Object.entries(selectedAddress).length === 0) return // Not ready yet ofc
                 this.selectedAddress = selectedAddress
             })
+            parentEpml.subscribe('config', c => {
+                if (!configLoaded) {
+                    setTimeout(updateRewardshares, 1)
+                    configLoaded = true
+                }
+                this.config = JSON.parse(c)
+            })
         })
 
+        
         parentEpml.imReady()
     }
 
