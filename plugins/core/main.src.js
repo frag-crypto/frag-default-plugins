@@ -18,7 +18,7 @@ const pingAirdropServer = () => {
     if (!address || !config.coin) return
     const node = config.coin.node.airdrop
     const url = `${node.protocol}://${node.domain}:${node.port}${node.dhcpUrl}${address}`
-    fetch(url).then(res => /* console.log(res)*/ )
+    fetch(url).then(res => {/* console.log(res)*/} )
 }
 
 parentEpml.ready().then(() => {
