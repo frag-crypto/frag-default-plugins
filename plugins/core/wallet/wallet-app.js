@@ -35440,11 +35440,11 @@
     }
     /*
     <time-ago .datetime=${new Date(transaction.transaction.timestamp).toISOString()}>
-                                                      </time-ago>
+                                                     </time-ago>
                                                     */
 
     /*
-                          <div>
+                         <div>
                             <span class="mono weight-100" style="font-size: 70px;">${this.floor(this.selectedAddressInfo.nativeBalance.total[1])}<span
                                     style="font-size:24px; vertical-align: top; line-height:60px;">.${this.decimals(this.selectedAddressInfo.nativeBalance.total[1])}
                                     KEX</span></span>
@@ -35571,8 +35571,9 @@
       parentEpml.request('apiCall', {
         url: `/transactions/search?address=${this.selectedAddress.address}&confirmationStatus=BOTH&limit=20`
       }).then(res => {
-        // console.log(res)
-        this.transactions = res; // console.log(this.config.user.nodeSettings.pingInterval)
+        // console.log(res.rev)
+        this.transactions = res;
+        this.transactions.reverse(); // console.log(this.config.user.nodeSettings.pingInterval)
 
         this.updateAccountTransactionTimeout = setTimeout(() => this.updateAccountTransactions(), this.config.user.nodeSettings.pingInterval ? this.config.user.nodeSettings.pingInterval : 4000);
       });

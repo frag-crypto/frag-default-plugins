@@ -25,7 +25,8 @@ class NodeManagement extends LitElement {
     static get properties() {
         return {
             loading: { type: Boolean },
-            mintingAccounts: { type: Array},
+            upTime: { type: String },
+            mintingAccounts: { type: Array },
             peers: { type: Array },
             addMintingAccountLoading: { type: Boolean },
             addPeerLoading: { type: Boolean },
@@ -92,6 +93,7 @@ class NodeManagement extends LitElement {
 
     constructor() {
         super()
+        this.upTime = ""
         this.mintingAccounts = []
         this.peers = []
         this.addPeerLoading = false
@@ -114,7 +116,7 @@ class NodeManagement extends LitElement {
 
                 <div class="node-card">
                     <h2>Node management for ${this.config.user.node.domain}</h2>
-                    <span><br>Node has been online for 12d 13h 16m</span>
+                    <span><br>Node has been online for ${this.upTime}</span>
 
                     <br><br>
                     <div id="minting">
@@ -222,10 +224,10 @@ class NodeManagement extends LitElement {
         `
     }
 
-    addPeer (e) {
+    addPeer(e) {
         this.addPeerLoading = true
         const addPeerAddress = this.shadowRoot.querySelector('#addPeerAddress').value
-        
+
         parentEpml.request('apiCall', {
             url: `/peers`,
             method: 'POST',
@@ -235,10 +237,10 @@ class NodeManagement extends LitElement {
             console.log(res)
             this.addPeerLoading = false
         })
-        
+
     }
 
-    addMintingAccount (e) {
+    addMintingAccount(e) {
         this.addMintingAccountLoading = true
         this.addMintingAccountMessage = "Doing something delicious"
 
@@ -253,20 +255,50 @@ class NodeManagement extends LitElement {
             this.addMintingAccountLoading = false
             if (res === 'true') this.addMintingAccountMessage = 'Success!'
         })
-        
-        
+
+
         // this.addMintingAccountLoading = false
     }
 
     firstUpdated() {
+        // Calculate HH MM SS from Milliseconds...
+        const convertMsToTime = milliseconds => {
+            let day, hour, minute, seconds;
+            seconds = Math.floor(milliseconds / 1000);
+            minute = Math.floor(seconds / 60);
+            seconds = seconds % 60;
+            hour = Math.floor(minute / 60);
+            minute = minute % 60;
+            day = Math.floor(hour / 24);
+            hour = hour % 24;
+            return day + "d " + hour + "h " + minute + "m";
+        };
+
+        const getNodeUpTime = () => {
+            console.log("=========================================");
+            parentEpml
+                .request("apiCall", {
+                    url: `/admin/uptime`
+                })
+                .then(res => {
+                    // console.log(res);
+                    this.upTime = "";
+                    setTimeout(() => {
+                        this.upTime = convertMsToTime(res);
+                    }, 1);
+                });
+
+            setTimeout(getNodeUpTime, this.config.user.nodeSettings.pingInterval);
+        };
+
         const updateMintingAccounts = () => {
-            console.log('=========================================')
+            // console.log('=========================================')
             parentEpml.request('apiCall', {
                 url: `/admin/mintingaccounts`
             }).then(res => {
                 console.log(res)
                 this.mintingAccounts = []
-                setTimeout(() => {this.mintingAccounts = res}, 1)
+                setTimeout(() => { this.mintingAccounts = res }, 1)
             })
 
             setTimeout(updateMintingAccounts, this.config.user.nodeSettings.pingInterval) // Perhaps should be slower...?
@@ -277,7 +309,7 @@ class NodeManagement extends LitElement {
                 url: `/peers`
             }).then(res => {
                 this.peers = []
-                setTimeout(() => {this.peers = res}, 1)
+                setTimeout(() => { this.peers = res }, 1)
             })
 
             setTimeout(updatePeers, this.config.user.nodeSettings.pingInterval)
@@ -287,6 +319,7 @@ class NodeManagement extends LitElement {
         parentEpml.ready().then(() => {
             parentEpml.subscribe('config', c => {
                 if (!configLoaded) {
+                    setTimeout(getNodeUpTime, 1)
                     setTimeout(updatePeers, 1)
                     setTimeout(updateMintingAccounts, 1)
                     configLoaded = true
@@ -298,7 +331,7 @@ class NodeManagement extends LitElement {
         parentEpml.imReady()
     }
 
-    isEmptyArray (arr) {
+    isEmptyArray(arr) {
         if (!arr) { return true }
         return arr.length === 0
     }

@@ -41400,9 +41400,9 @@
     /*
     <h2>Create reward shares</h2>
                 <span><br>Creating a reward share for another account requires an account with level 5 or higher. If you are doing a self share (a reward share to your account) then put 0% for reward share percentage.</span>
-                  <paper-input label="Recipient public key" id="recipientPublicKey" type="text" value="${this.recipientPublicKey}"></paper-input>
+                 <paper-input label="Recipient public key" id="recipientPublicKey" type="text" value="${this.recipientPublicKey}"></paper-input>
                 <paper-input label="Reward share percentage" id="percentageShare" type="number" value="${this.percentageShare}"></paper-input>
-                  <mwc-button @click=${this.createRewardShare} style="width:100%;">Create rewardshare key</mwc-button>
+                 <mwc-button @click=${this.createRewardShare} style="width:100%;">Create rewardshare key</mwc-button>
     */
 
 
@@ -41414,9 +41414,11 @@
                     <mwc-button style="float:right;" @click=${() => this.shadowRoot.querySelector('#createRewardShareDialog').show()}><mwc-icon>add</mwc-icon>Create reward share</mwc-button>
                 </div>
 
-                <vaadin-grid id="accountRewardSharesGrid" style="height:auto;" ?hidden="${this.isEmptyArray(this.accountRewardShares)}" aria-label="Peers" .items="${this.accountRewardShares}" height-by-rows>
-                    <vaadin-grid-column path="address"></vaadin-grid-column>
-                    <vaadin-grid-column path="lastHeight"></vaadin-grid-column>
+                <vaadin-grid id="accountRewardSharesGrid" style="height:auto;" ?hidden="${this.isEmptyArray(this.rewardShares)}" aria-label="Peers" .items="${this.rewardShares}" height-by-rows>
+                    <vaadin-grid-column path="mintingAccount"></vaadin-grid-column>
+                    <vaadin-grid-column path="sharePercent"></vaadin-grid-column>
+                    <vaadin-grid-column path="recipient"></vaadin-grid-column>
+                    <vaadin-grid-column path="rewardSharePublicKey"></vaadin-grid-column>
                 </vaadin-grid>
 
                 <mwc-dialog id="createRewardShareDialog" scrimClickAction="${this.createRewardShareLoading ? '' : 'close'}">
@@ -41468,8 +41470,7 @@
                     </mwc-button>
                 </mwc-dialog>
 
-
-                ${this.isEmptyArray(this.accountRewardShares) ? html`
+                ${this.isEmptyArray(this.rewardShares) ? html`
                     Account is not involved in any reward shares
                 ` : ''}
             </div>
@@ -41488,7 +41489,7 @@
             this.rewardShares = res;
           }, 1);
         });
-        setTimeout(updateRewardshares, this.config.user.nodeSettings.pingInterval); // Perhaps should be slower...?
+        setTimeout(updateRewardshares, this.config.user.nodeSettings.pingInterval); //THOUGHTS: No config is definded, when then use it here....    // Perhaps should be slower...?
       };
 
       let configLoaded = false;

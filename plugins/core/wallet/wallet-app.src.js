@@ -58,7 +58,7 @@ const coreEpml = new Epml({
 })
 
 class WalletApp extends LitElement {
-    static get properties () {
+    static get properties() {
         return {
             loading: { type: Boolean },
             lastAddress: { type: String },
@@ -77,7 +77,7 @@ class WalletApp extends LitElement {
         }
     }
 
-    static get styles () {
+    static get styles() {
         return css`
             .red{
                 color: var(--paper-red-500);
@@ -148,7 +148,7 @@ class WalletApp extends LitElement {
         `
     }
 
-    constructor () {
+    constructor() {
         super()
         this.lastAddress = ''
         this.transactions = []
@@ -185,7 +185,7 @@ class WalletApp extends LitElement {
                                     KEX</span></span>
                         </div>
     */
-    render () {
+    render() {
         return html`
             <div class="white-bg">
                 <div ?hidden="${!this.loading}" class="layout horizontal center" style="height:100vh;">
@@ -233,15 +233,15 @@ class WalletApp extends LitElement {
                                 <vaadin-grid-column path="fee"></vaadin-grid-column>
                                 <vaadin-grid-column path="amount"></vaadin-grid-column>
                                 <vaadin-grid-column header="Time" .renderer=${(root, column, data) => {
-                                    // console.log(data.item.timestamp)
-                                    // console.log(root)
-                                    const time = new Date(data.item.timestamp)
-                                    render(html`
+                // console.log(data.item.timestamp)
+                // console.log(root)
+                const time = new Date(data.item.timestamp)
+                render(html`
                                         <time-ago datetime=${time.toISOString()}>
                                             
                                         </time-ago>
                                     `, root)
-                                }}>
+            }}>
                                 </vaadin-grid-column>
                             </vaadin-grid>
                     </div>
@@ -250,7 +250,7 @@ class WalletApp extends LitElement {
         `
     }
 
-    firstUpdated () {
+    firstUpdated() {
         let configLoaded = false
         parentEpml.ready().then(() => {
             parentEpml.subscribe('config', c => {
@@ -301,15 +301,17 @@ class WalletApp extends LitElement {
         coreEpml.imReady()
     }
 
-    updateAccountTransactions () {
+
+    updateAccountTransactions() {
         clearTimeout(this.updateAccountTransactionTimeout)
         parentEpml.request('apiCall', {
             url: `/transactions/search?address=${this.selectedAddress.address}&confirmationStatus=BOTH&limit=20`
         }).then(res => {
-            // console.log(res)
+            // console.log(res.rev)
             this.transactions = res
+            this.transactions.reverse()
             // console.log(this.config.user.nodeSettings.pingInterval)
-            this.updateAccountTransactionTimeout = setTimeout(() => this.updateAccountTransactions(), this.config.user.nodeSettings.pingInterval ? this.config.user.nodeSettings.pingInterval : 4000 )
+            this.updateAccountTransactionTimeout = setTimeout(() => this.updateAccountTransactions(), this.config.user.nodeSettings.pingInterval ? this.config.user.nodeSettings.pingInterval : 4000)
         })
     }
 
@@ -337,49 +339,49 @@ class WalletApp extends LitElement {
         })
     }
 
-    isEmptyArray (arr) {
+    isEmptyArray(arr) {
         if (!arr) { return true }
         return arr.length === 0
     }
-    floor (num) {
+    floor(num) {
         num = parseFloat(num)
         return isNaN(num) ? 0 : this._format(Math.floor(num))
     }
-    decimals (num) {
+    decimals(num) {
         num = parseFloat(num) // So that conversion to string can get rid of insignificant zeros
         // return isNaN(num) ? 0 : (num + "").split(".")[1]
         return num % 1 > 0 ? (num + '').split('.')[1] : '0'
     }
 
-    sendOrRecieve (tx) {
+    sendOrRecieve(tx) {
         return tx.sender == this.selectedAddress.address
     }
 
-    senderOrRecipient (tx) {
+    senderOrRecipient(tx) {
         return this.sendOrRecieve(tx) ? tx.recipient : tx.sender
     }
 
-    txColor (tx) {
+    txColor(tx) {
         return this.sendOrRecieve(tx) ? 'red' : 'green'
     }
-    getTxType (type) {
+    getTxType(type) {
         return TX_TYPES[type]
     }
-    subtract (num1, num2) {
+    subtract(num1, num2) {
         return num1 - num2
     }
-    getConfirmations (height, lastBlockHeight) {
+    getConfirmations(height, lastBlockHeight) {
         return lastBlockHeight - height + 1
     }
 
-    _format (num) {
+    _format(num) {
         return num.toLocaleString()
     }
 
-    textColor (color) {
+    textColor(color) {
         return color === 'light' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.87)'
     }
-    _unconfirmedClass (unconfirmed) {
+    _unconfirmedClass(unconfirmed) {
         return unconfirmed ? 'unconfirmed' : ''
     }
 }

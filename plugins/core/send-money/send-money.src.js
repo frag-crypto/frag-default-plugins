@@ -23,7 +23,7 @@ const coreEpml = new Epml({
 })
 
 class SendMoneyPage extends LitElement {
-    static get properties () {
+    static get properties() {
         return {
             addresses: { type: Array },
             amount: { type: Number },
@@ -43,14 +43,14 @@ class SendMoneyPage extends LitElement {
         }
     }
 
-    static get observers () {
+    static get observers() {
         return [
             // "_setSelectedAddressInfo(selectedAddress.*, addressesInfo)"
             '_kmxKeyUp(amount)'
         ]
     }
 
-    static get styles () {
+    static get styles() {
         return css`
             * {
                 --mdc-theme-primary: rgb(3, 169, 244);
@@ -121,7 +121,7 @@ class SendMoneyPage extends LitElement {
             }
         `
     }
-    render () {
+    render() {
         return html`
             <div id="sendMoneyWrapper" style="width:auto; padding:10px; background: #fff; height:100vh;">
                 <div class="layout horizontal center" style=" padding:12px 15px;">
@@ -144,9 +144,9 @@ class SendMoneyPage extends LitElement {
                         required
                         label="Amount (qort)"
                         @input=${() => {
-                            // console.log('changed')
-                            this._checkAmount()
-                        }}
+                // console.log('changed')
+                this._checkAmount()
+            }}
                         type="number"
                         auto-validate="false"
                         invalid=${this.validAmount}
@@ -177,11 +177,11 @@ class SendMoneyPage extends LitElement {
         `
     }
 
-    _floor (num) {
+    _floor(num) {
         return Math.floor(num)
     }
 
-    _checkAmount () {
+    _checkAmount() {
         const amount = this.shadowRoot.getElementById('amountInput').value
         const balance = this.balance
         // console.log(parseFloat(amount), parseFloat(balance))
@@ -189,13 +189,14 @@ class SendMoneyPage extends LitElement {
         // console.log(this.validAmount)
     }
 
-    textColor (color) {
+    textColor(color) {
         return color == 'light' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.87)'
     }
 
-    async _sendMoney (e) {
+    async _sendMoney(e) {
         const amount = this.shadowRoot.getElementById('amountInput').value // * Math.pow(10, 8)
         let recipient = this.shadowRoot.getElementById('recipient').value
+
         // var fee = this.fee
 
         // Check for valid...^
@@ -203,61 +204,111 @@ class SendMoneyPage extends LitElement {
         this.sendMoneyLoading = true
 
         console.log(this.selectedAddress)
-        try {
-            let lastRef = await parentEpml.request('apiCall', {
+
+        // Get Last Ref...
+        // Might want to call it with the sender's address or just pick it from the func..
+        const getLastRef = async () => {
+            let myRef = await parentEpml.request('apiCall', {
                 type: 'api',
                 url: `/addresses/lastreference/${this.selectedAddress.address}`
             })
-            // lastRef = lastRef.data
-            console.log(lastRef) // TICK
-            // lastRef = JSON.parse(lastRef)
-            let recipientAsNameInfo = await parentEpml.request('apiCall', {
-                type: 'api',
-                url: `names/${recipient}`
-                // eslint-disable-next-line handle-callback-err
-            })
-            // .catch(err => {
-            //     return JSON.stringify({})
-            // }) //  ...uhhh i dont even know
-            // console.log(recipientAsNameInfo)
-            console.log(recipientAsNameInfo)
-            if (recipientAsNameInfo.success) {
-                // Probably not...
-                recipientAsNameInfo = recipientAsNameInfo.data // JSON.parse(recipientAsNameInfo.data)
-                recipient = recipientAsNameInfo.value
-            }
+            return myRef
+        };
 
-            const txRequestResponse = await parentEpml.request('transaction', {
+        // Validate name
+        const validateName = async (receiverName) => {
+            let myName = false
+            let myNameRes = await parentEpml.request('apiCall', {
+                type: 'api',
+                url: `/names/${receiverName}`
+            })
+
+            if (myNameRes.message === "name unknown") {
+                myName = false
+                return myName
+            } else {
+                myName = true
+                return myName
+            }
+        }
+
+        // Validate Address
+        const validateAddress = async (receiverAddress) => {
+            let myAddress = await parentEpml.request('apiCall', {
+                type: 'api',
+                url: `/addresses/validate/${receiverAddress}`
+            })
+            return myAddress
+        }
+
+        // Validate Receiver
+        const validateReceiver = async recipient => {
+            let lastRef = await getLastRef();
+            console.log(lastRef)
+            let isAddress = await validateAddress(recipient)
+            console.log(isAddress)
+            if (isAddress) {
+                console.log("CALLING TRUE")
+                let myTransaction = await makeTransactionRequest(recipient, lastRef) // THOUGHTS: Might wanna use a setTimeout here...
+                getTxnRequestResponse(myTransaction)
+            } else {
+                console.log("CALLING False")
+                let isName = await validateName(recipient)
+                if (isName) {
+                    let myTransaction = await makeTransactionRequest(recipient, lastRef)
+                    getTxnRequestResponse(myTransaction)
+                } else {
+                    // Return INVALID_RECEIVER
+                    console.error("INVALID_RECEIVER") // THOUGHTS: Handle this properly..
+                    this.errorMessage = "INVALID_RECEIVER"
+
+                }
+            }
+        }
+
+        // Make Transaction Request
+        const makeTransactionRequest = async (receiver, lastRef) => {
+            let myReceiver = receiver
+            let mylastRef = lastRef
+
+            let myTxnrequest = await parentEpml.request('transaction', {
                 type: 2,
                 nonce: this.selectedAddress.nonce,
                 params: {
-                    recipient,
+                    recipient: myReceiver,
                     amount: amount * Math.pow(10, 8),
-                    lastReference: lastRef,
+                    lastReference: mylastRef,
                     fee: 0.001
+                    // Fees shouldn't be hard-coded in here...
                 }
             })
 
-            console.log(txRequestResponse)
-            const responseData = JSON.parse(txRequestResponse) // JSON.parse(txRequestResponse)
-            console.log(responseData)
-            if (!responseData.reference) {
-                if (responseData.success === false) {
-                    throw new Error(responseData)
-                }
-                // ${ERROR_CODES[responseData]}
-                if (ERROR_CODES[responseData]) throw new Error(`Error!. Code ${responseData}: ${ERROR_CODES[responseData]}`)
-                throw new Error(`Error!. ${responseData}`)
-            }
-
-            this.errorMessage = ''
-            this.recipient = ''
-            this.amount = ''
-            this.successMessage = 'Success! ' + txRequestResponse
-        } catch (e) {
-            console.error(e)
-            this.errorMessage = e.message
+            return myTxnrequest
         }
+
+        // FAILED txnResponse = {success: false, message: "User declined transaction"}
+        // SUCCESS txnResponse = { success: true, data: true }
+
+        const getTxnRequestResponse = (txnResponse) => {
+            // const responseData = JSON.parse(txnResponse) // FIX: This is not necessary. GIVES error because response is not a JSON object...
+            console.log(txnResponse)
+            if (txnResponse.success === false) {
+                this.errorMessage = txnResponse.message
+                throw new Error(txnResponse)
+            } else {
+                this.errorMessage = ''
+                this.recipient = ''
+                this.amount = 0
+                this.successMessage = 'Transaction Successful!'
+            }
+        }
+
+
+        // Call validateReceiver
+        setTimeout(() => {
+            validateReceiver(recipient)
+        }, 1000);
+
         this.sendMoneyLoading = false
     }
 
@@ -268,12 +319,12 @@ class SendMoneyPage extends LitElement {
         }).then(res => {
             console.log(res)
             this.balance = res
-            console.log(this.config.user.nodeSettings.pingInterval)
-            this.updateAccountBalanceTimeout = setTimeout(() => this.updateAccountBalance(), this.config.user.nodeSettings.pingInterval ? this.config.user.nodeSettings.pingInterval : 4000)
+            // console.log(this.config.user.nodeSettings.pingInterval) // FIX: config not defined, so causing error...
+            this.updateAccountBalanceTimeout = setTimeout(() => this.updateAccountBalance(), 4000)
         })
     }
 
-    constructor () {
+    constructor() {
         super()
         this.recipient = ''
         this.addresses = []

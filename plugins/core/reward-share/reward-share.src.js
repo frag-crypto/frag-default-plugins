@@ -25,7 +25,7 @@ class RewardShare extends LitElement {
     static get properties() {
         return {
             loading: { type: Boolean },
-            rewardShares : { type: Array },
+            rewardShares: { type: Array },
             recipientPublicKey: { type: String },
             selectedAddress: { type: Object },
             createRewardShareLoading: { type: Boolean },
@@ -85,9 +85,11 @@ class RewardShare extends LitElement {
                     <mwc-button style="float:right;" @click=${() => this.shadowRoot.querySelector('#createRewardShareDialog').show()}><mwc-icon>add</mwc-icon>Create reward share</mwc-button>
                 </div>
 
-                <vaadin-grid id="accountRewardSharesGrid" style="height:auto;" ?hidden="${this.isEmptyArray(this.accountRewardShares)}" aria-label="Peers" .items="${this.accountRewardShares}" height-by-rows>
-                    <vaadin-grid-column path="address"></vaadin-grid-column>
-                    <vaadin-grid-column path="lastHeight"></vaadin-grid-column>
+                <vaadin-grid id="accountRewardSharesGrid" style="height:auto;" ?hidden="${this.isEmptyArray(this.rewardShares)}" aria-label="Peers" .items="${this.rewardShares}" height-by-rows>
+                    <vaadin-grid-column path="mintingAccount"></vaadin-grid-column>
+                    <vaadin-grid-column path="sharePercent"></vaadin-grid-column>
+                    <vaadin-grid-column path="recipient"></vaadin-grid-column>
+                    <vaadin-grid-column path="rewardSharePublicKey"></vaadin-grid-column>
                 </vaadin-grid>
 
                 <mwc-dialog id="createRewardShareDialog" scrimClickAction="${this.createRewardShareLoading ? '' : 'close'}">
@@ -139,8 +141,7 @@ class RewardShare extends LitElement {
                     </mwc-button>
                 </mwc-dialog>
 
-
-                ${this.isEmptyArray(this.accountRewardShares) ? html`
+                ${this.isEmptyArray(this.rewardShares) ? html`
                     Account is not involved in any reward shares
                 `: ''}
             </div>
@@ -157,7 +158,7 @@ class RewardShare extends LitElement {
                 this.rewardShares = []
                 setTimeout(() => { this.rewardShares = res }, 1)
             })
-            setTimeout(updateRewardshares, this.config.user.nodeSettings.pingInterval) // Perhaps should be slower...?
+            setTimeout(updateRewardshares, this.config.user.nodeSettings.pingInterval) //THOUGHTS: No config is definded, when then use it here....    // Perhaps should be slower...?
         }
 
         let configLoaded = false
@@ -180,11 +181,11 @@ class RewardShare extends LitElement {
             })
         })
 
-        
+
         parentEpml.imReady()
     }
 
-    async createRewardShare (e) {
+    async createRewardShare(e) {
         this.error = false
         this.message = ''
         const recipientPublicKey = this.shadowRoot.getElementById("recipientPublicKey").value

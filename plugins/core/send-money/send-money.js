@@ -27124,69 +27124,110 @@
       // Check for valid...^
 
       this.sendMoneyLoading = true;
-      console.log(this.selectedAddress);
+      console.log(this.selectedAddress); // Get Last Ref...
+      // Might want to call it with the sender's address or just pick it from the func..
 
-      try {
-        let lastRef = await parentEpml.request('apiCall', {
+      const getLastRef = async () => {
+        let myRef = await parentEpml.request('apiCall', {
           type: 'api',
           url: `/addresses/lastreference/${this.selectedAddress.address}`
-        }); // lastRef = lastRef.data
+        });
+        return myRef;
+      }; // Validate name
 
-        console.log(lastRef); // TICK
-        // lastRef = JSON.parse(lastRef)
 
-        let recipientAsNameInfo = await parentEpml.request('apiCall', {
+      const validateName = async receiverName => {
+        let myName = false;
+        let myNameRes = await parentEpml.request('apiCall', {
           type: 'api',
-          url: `names/${recipient}` // eslint-disable-next-line handle-callback-err
+          url: `/names/${receiverName}`
+        });
 
-        }); // .catch(err => {
-        //     return JSON.stringify({})
-        // }) //  ...uhhh i dont even know
-        // console.log(recipientAsNameInfo)
-
-        console.log(recipientAsNameInfo);
-
-        if (recipientAsNameInfo.success) {
-          // Probably not...
-          recipientAsNameInfo = recipientAsNameInfo.data; // JSON.parse(recipientAsNameInfo.data)
-
-          recipient = recipientAsNameInfo.value;
+        if (myNameRes.message === "name unknown") {
+          myName = false;
+          return myName;
+        } else {
+          myName = true;
+          return myName;
         }
+      }; // Validate Address
 
-        const txRequestResponse = await parentEpml.request('transaction', {
+
+      const validateAddress = async receiverAddress => {
+        let myAddress = await parentEpml.request('apiCall', {
+          type: 'api',
+          url: `/addresses/validate/${receiverAddress}`
+        });
+        return myAddress;
+      }; // Validate Receiver
+
+
+      const validateReceiver = async recipient => {
+        let lastRef = await getLastRef();
+        console.log(lastRef);
+        let isAddress = await validateAddress(recipient);
+        console.log(isAddress);
+
+        if (isAddress) {
+          console.log("CALLING TRUE");
+          let myTransaction = await makeTransactionRequest(recipient, lastRef); // THOUGHTS: Might wanna use a setTimeout here...
+
+          getTxnRequestResponse(myTransaction);
+        } else {
+          console.log("CALLING False");
+          let isName = await validateName(recipient);
+
+          if (isName) {
+            let myTransaction = await makeTransactionRequest(recipient, lastRef);
+            getTxnRequestResponse(myTransaction);
+          } else {
+            // Return INVALID_RECEIVER
+            console.error("INVALID_RECEIVER"); // THOUGHTS: Handle this properly..
+
+            this.errorMessage = "INVALID_RECEIVER";
+          }
+        }
+      }; // Make Transaction Request
+
+
+      const makeTransactionRequest = async (receiver, lastRef) => {
+        let myReceiver = receiver;
+        let mylastRef = lastRef;
+        let myTxnrequest = await parentEpml.request('transaction', {
           type: 2,
           nonce: this.selectedAddress.nonce,
           params: {
-            recipient,
+            recipient: myReceiver,
             amount: amount * Math.pow(10, 8),
-            lastReference: lastRef,
-            fee: 0.001
+            lastReference: mylastRef,
+            fee: 0.001 // Fees shouldn't be hard-coded in here...
+
           }
         });
-        console.log(txRequestResponse);
-        const responseData = JSON.parse(txRequestResponse); // JSON.parse(txRequestResponse)
-
-        console.log(responseData);
-
-        if (!responseData.reference) {
-          if (responseData.success === false) {
-            throw new Error(responseData);
-          } // ${ERROR_CODES[responseData]}
+        return myTxnrequest;
+      }; // FAILED txnResponse = {success: false, message: "User declined transaction"}
+      // SUCCESS txnResponse = { success: true, data: true }
 
 
-          if (ERROR_CODES[responseData]) throw new Error(`Error!. Code ${responseData}: ${ERROR_CODES[responseData]}`);
-          throw new Error(`Error!. ${responseData}`);
+      const getTxnRequestResponse = txnResponse => {
+        // const responseData = JSON.parse(txnResponse) // FIX: This is not necessary. GIVES error because response is not a JSON object...
+        console.log(txnResponse);
+
+        if (txnResponse.success === false) {
+          this.errorMessage = txnResponse.message;
+          throw new Error(txnResponse);
+        } else {
+          this.errorMessage = '';
+          this.recipient = '';
+          this.amount = 0;
+          this.successMessage = 'Transaction Successful!';
         }
+      }; // Call validateReceiver
 
-        this.errorMessage = '';
-        this.recipient = '';
-        this.amount = '';
-        this.successMessage = 'Success! ' + txRequestResponse;
-      } catch (e) {
-        console.error(e);
-        this.errorMessage = e.message;
-      }
 
+      setTimeout(() => {
+        validateReceiver(recipient);
+      }, 1000);
       this.sendMoneyLoading = false;
     }
 
@@ -27196,9 +27237,9 @@
         url: `/addresses/balance/${this.selectedAddress.address}`
       }).then(res => {
         console.log(res);
-        this.balance = res;
-        console.log(this.config.user.nodeSettings.pingInterval);
-        this.updateAccountBalanceTimeout = setTimeout(() => this.updateAccountBalance(), this.config.user.nodeSettings.pingInterval ? this.config.user.nodeSettings.pingInterval : 4000);
+        this.balance = res; // console.log(this.config.user.nodeSettings.pingInterval) // FIX: config not defined, so causing error...
+
+        this.updateAccountBalanceTimeout = setTimeout(() => this.updateAccountBalance(), 4000);
       });
     }
 
